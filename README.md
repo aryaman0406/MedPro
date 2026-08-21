@@ -331,6 +331,30 @@ npm run test
 
 ---
 
+## 🌐 Live Production Deployment & Known Limitations
+
+- **Live Production URL**: [https://medtrackpro.vercel.app](https://medtrackpro.vercel.app)
+- **GitHub Repository**: [https://github.com/aryaman0406/MedPro](https://github.com/aryaman0406/MedPro)
+
+### Known Limitations of the Free-Tier Deployment
+When evaluating the live free-tier production deployment, keep the following platform constraints in mind:
+
+1. **Google OAuth Consent Screen (Testing Mode)**:
+   - Google restricts OAuth consent in *Testing* status to a maximum of 100 explicitly invited test user Gmail accounts. For broader deployment, the GCP project would need to be verified or placed in *Production* consent status.
+2. **Brevo SMTP Outbound Rate Limit**:
+   - The free Brevo SMTP relay account has a cap of **300 transactional emails/day** with a maximum sending rate of 5 emails/second.
+3. **Upstash Serverless Free Quotas**:
+   - **Upstash Redis**: Free tier permits up to 10,000 commands/day and 256MB memory.
+   - **Upstash QStash**: Free background cron dispatch allows up to 500 messages/day.
+4. **Pusher Channels Sandbox Plan**:
+   - The Pusher Sandbox cluster is limited to 200,000 WebSocket messages/day and 100 concurrent browser connections.
+5. **Vercel Serverless Function Execution Limits**:
+   - Vercel Hobby plan enforces a 10-second maximum duration per serverless function invocation. Long-running AI batch synthesis operations are therefore decoupled asynchronously to avoid function timeouts.
+6. **Serverless Cold Starts**:
+   - Initial cold-start invocations on inactive serverless routes may introduce ~200–400ms latency on the very first request.
+
+---
+
 ## 🏗️ Production Build Verification
 
 ```bash
