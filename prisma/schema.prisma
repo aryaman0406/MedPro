@@ -1,0 +1,134 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  PATIENT
+  DOCTOR
+  ADMIN
+}
+
+enum AppointmentStatus {
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NEEDS_RESCHEDULE
+  NO_SHOW
+}
+
+enum EmailType {
+  BOOKING_CONFIRMATION
+  REMINDER
+  CANCELLATION
+  LEAVE_NOTICE
+  MEDICATION_REMINDER
+}
+
+enum EmailStatus {
+  PENDING
+  SENT
+  FAILED
+  DEAD
+}
+
+model User {
+  id           String         @id @default(cuid())
+  name         String
+  email        String         @unique
+  passwordHash String
+  role         Role           @default(PATIENT)
+  phone        String?
+  createdAt    DateTime       @default(now())
+
+  // Relations
+  doctorProfile          DoctorProfile?
+  appointmentsAsPatient  Appointment[]   @relation("PatientAppointments")
+  calendarEvents         CalendarEvent[]
+
+  @@map("users")
+}
+
+model DoctorProfile {
+  id                  String         @id @default(cuid())
+  userId              String         @unique
+  user                User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  specialization      String
+  bio                 String?        @db.Text
+  slotDurationMinutes Int            @default(30)
+  workingHours        Json           // e.g. { "monday": { "start": "09:00", "end": "17:00" }, ... }
+  isActive            Boolean        @default(true)
+
+  // Relations
+  leaves              DoctorLeave[]
+  appointments        Appointment[]
+
+  @@map("doctor_profiles")
+}
+
+model DoctorLeave {
+  id        String        @id @default(cuid())
+  doctorId  String
+  doctor    DoctorProfile @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  date      DateTime      @db.Date
+  reason    String?       @db.Text
+  createdAt DateTime      @default(now())
+
+  @@map("doctor_leaves")
+}
+
+model Appointment {
+  id                   String            @id @default(cuid())
+  doctorId             String
+  doctor               DoctorProfile     @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  patientId            String
+  patient              User              @relation("PatientAppointments", fields: [patientId], references: [id], onDelete: Cascade)
+  startTime            DateTime          @db.Timestamptz(6)
+  endTime              DateTime          @db.Timestamptz(6)
+  status               AppointmentStatus @default(CONFIRMED)
+  symptomText          String            @db.Text
+  preVisitSummaryJson  Json?
+  postVisitNotes       String?           @db.Text
+  postVisitSummaryJson Json?
+  prescriptionJson     Json?
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  // Relations
+  emailLogs            EmailLog[]
+  calendarEvents       CalendarEvent[]
+
+  @@index([doctorId, startTime])
+  @@index([patientId, startTime])
+  @@map("appointments")
+}
+
+model EmailLog {
+  id            String       @id @default(cuid())
+  appointmentId String?
+  appointment   Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  toEmail       String
+  type          EmailType
+  status        EmailStatus  @default(PENDING)
+  attempts      Int          @default(0)
+  lastError     String?      @db.Text
+  createdAt     DateTime     @default(now())
+
+  @@map("email_logs")
+}
+
+model CalendarEvent {
+  id            String       @id @default(cuid())
+  appointmentId String
+  appointment   Appointment  @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  googleEventId String
+  createdAt     DateTime     @default(now())
+
+  @@map("calendar_events")
+}
