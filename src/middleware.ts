@@ -17,7 +17,7 @@ export default auth((req) => {
   // If user is already authenticated and tries to visit /login or /register, redirect to their dashboard
   if (isAuthRoute && session?.user) {
     if (userRole === "ADMIN") {
-      return NextResponse.redirect(new URL("/admin/doctors", req.url));
+      return NextResponse.redirect(new URL("/admin", req.url));
     }
     if (userRole === "DOCTOR") {
       return NextResponse.redirect(new URL("/doctor/schedule", req.url));
@@ -63,9 +63,10 @@ export default auth((req) => {
 
 export const config = {
   matcher: [
+    "/admin",
+    "/admin/:path*",
     "/patient/:path*",
     "/doctor/:path*",
-    "/admin/:path*",
     "/login",
     "/register",
   ],

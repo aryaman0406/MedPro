@@ -63,8 +63,8 @@ export function Navbar({ user }: NavbarProps) {
         ];
       case "ADMIN":
         return [
+          { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
           { label: "Doctors", href: "/admin/doctors", icon: Users },
-          { label: "Analytics", href: "/admin/analytics", icon: LayoutDashboard },
         ];
       default:
         return [];
