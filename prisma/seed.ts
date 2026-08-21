@@ -1,3 +1,17 @@
+import fs from "fs";
+import path from "path";
+
+// Load .env.local for standalone execution
+if (typeof process.loadEnvFile === "function") {
+  try {
+    if (fs.existsSync(path.resolve(process.cwd(), ".env.local"))) {
+      process.loadEnvFile(path.resolve(process.cwd(), ".env.local"));
+    }
+  } catch (e) {
+    // Ignore if not present
+  }
+}
+
 import { PrismaClient, Role } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
