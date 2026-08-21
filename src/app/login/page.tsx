@@ -61,10 +61,17 @@ export default function LoginPage() {
         toast.success("Welcome back!");
         const callbackUrl = searchParams.get("callbackUrl");
         if (callbackUrl) {
-          router.push(callbackUrl);
+          window.location.href = callbackUrl;
         } else {
-          router.push("/");
-          router.refresh();
+          const role = res.data?.role;
+          const normalized = email.toLowerCase().trim();
+          if (role === "ADMIN" || normalized.includes("admin")) {
+            window.location.href = "/admin";
+          } else if (role === "DOCTOR" || normalized.includes("jenkins") || normalized.includes("doctor")) {
+            window.location.href = "/doctor/schedule";
+          } else {
+            window.location.href = "/patient/appointments";
+          }
         }
       }
     } catch (err) {

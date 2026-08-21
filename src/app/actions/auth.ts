@@ -107,7 +107,7 @@ export async function registerUserAction(input: RegisterInput): Promise<ActionRe
   }
 }
 
-export async function loginUserAction(input: LoginInput): Promise<ActionResult> {
+export async function loginUserAction(input: LoginInput): Promise<ActionResult<{ role: Role }>> {
   try {
     const validated = LoginSchema.safeParse(input);
     if (!validated.success) {
@@ -119,16 +119,24 @@ export async function loginUserAction(input: LoginInput): Promise<ActionResult> 
     }
 
     const { email, password } = validated.data;
+    const normalizedEmail = email.toLowerCase().trim();
 
     await signIn("credentials", {
-      email: email.toLowerCase().trim(),
+      email: normalizedEmail,
       password,
       redirect: false,
+    });
+
+    // Fetch user to return role for immediate dashboard routing
+    const user = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+      select: { role: true },
     });
 
     return {
       success: true,
       message: "Logged in successfully.",
+      data: { role: user?.role || Role.PATIENT },
     };
   } catch (error) {
     if (error instanceof AuthError) {
