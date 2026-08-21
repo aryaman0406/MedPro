@@ -22,6 +22,8 @@ import {
 } from "@/app/actions/booking";
 import { ComputedSlot } from "@/lib/validations/booking";
 import { WorkingHours } from "@/lib/validations/admin";
+import { HoldCountdownTimer } from "@/components/booking/hold-countdown-timer";
+import { PageTransition } from "@/components/ui/page-transition";
 
 interface DoctorData {
   id: string;
@@ -248,7 +250,7 @@ export default function DoctorBookingPage() {
   const minDateString = new Date().toISOString().split("T")[0];
 
   return (
-    <div className="container mx-auto max-w-5xl px-4 py-8 space-y-6">
+    <PageTransition className="container mx-auto max-w-5xl px-4 py-8 space-y-6">
       {/* Back Button */}
       <div>
         <Button variant="ghost" size="sm" asChild className="gap-1.5 text-xs text-muted-foreground">
@@ -346,16 +348,16 @@ export default function DoctorBookingPage() {
         {/* Right Column: Computed Slot Grid */}
         <Card className="lg:col-span-2">
           <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <CardTitle className="text-base flex items-center gap-2">
                 <Clock className="h-4 w-4 text-primary" />
                 Available Slots
               </CardTitle>
               {heldSlot && (
-                <Badge variant="warning" className="flex items-center gap-1.5 font-mono text-xs">
-                  <Timer className="h-3.5 w-3.5 animate-spin" />
-                  Hold expires in {formatTimer(holdTimerSeconds)}
-                </Badge>
+                <HoldCountdownTimer
+                  remainingSeconds={holdTimerSeconds}
+                  totalSeconds={300}
+                />
               )}
             </div>
             <CardDescription className="text-xs">
@@ -532,6 +534,6 @@ export default function DoctorBookingPage() {
           </form>
         </Card>
       )}
-    </div>
+    </PageTransition>
   );
 }

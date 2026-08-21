@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 
 import { ThemeProvider } from "@/components/theme-provider";
@@ -8,12 +8,23 @@ import { Footer } from "@/components/layout/footer";
 import { Toaster } from "@/components/ui/sonner";
 import { auth } from "@/auth";
 
-const inter = Inter({ subsets: ["latin"] });
+const fontSans = Inter({
+  subsets: ["latin"],
+  variable: "--font-sans",
+  display: "swap",
+});
+
+const fontHeading = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  variable: "--font-heading",
+  display: "swap",
+  weight: ["500", "600", "700", "800"],
+});
 
 export const metadata: Metadata = {
-  title: "MedTrack Pro - Healthcare Appointment & Follow-up Manager",
+  title: "MedTrack Pro - Clinical Consultation & Scheduling Engine",
   description:
-    "Next-generation clinical scheduling, automated patient follow-ups, and AI-powered pre-visit synthesis.",
+    "AI-assisted clinical intake, real-time waiting room queues, automated medication reminders, and multi-party Google Calendar synchronization.",
 };
 
 export default async function RootLayout({
@@ -24,8 +35,8 @@ export default async function RootLayout({
   const session = await auth();
 
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} min-h-screen flex flex-col bg-background text-foreground`}>
+    <html lang="en" suppressHydrationWarning className={`${fontSans.variable} ${fontHeading.variable}`}>
+      <body className="min-h-screen flex flex-col bg-background text-foreground font-sans antialiased selection:bg-primary/20 selection:text-primary">
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -35,7 +46,7 @@ export default async function RootLayout({
           <Navbar user={session?.user} />
           <main className="flex-1 flex flex-col">{children}</main>
           <Footer />
-          <Toaster richColors position="top-right" />
+          <Toaster richColors position="top-right" closeButton />
         </ThemeProvider>
       </body>
     </html>

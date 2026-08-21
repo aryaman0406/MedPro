@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getPublicDoctorsAction } from "@/app/actions/booking";
 import { WorkingHours } from "@/lib/validations/admin";
+import { PageTransition } from "@/components/ui/page-transition";
 
 interface DoctorDirectoryItem {
   id: string;
@@ -80,7 +81,7 @@ export default function FindDoctorPage() {
   ];
 
   return (
-    <div className="container mx-auto max-w-7xl px-4 py-8 space-y-6">
+    <PageTransition className="container mx-auto max-w-7xl px-4 py-8 space-y-6">
       {/* Header */}
       <div className="space-y-1">
         <div className="flex items-center gap-2">
@@ -212,6 +213,6 @@ export default function FindDoctorPage() {
           ))}
         </div>
       )}
-    </div>
+    </PageTransition>
   );
 }

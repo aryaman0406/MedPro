@@ -4,7 +4,8 @@ import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { AppointmentStatus, Role } from "@prisma/client";
+import { AppointmentStatus, Role, EmailType, EmailStatus } from "@prisma/client";
+import { processEmailQueue } from "@/lib/email/mailer";
 import {
   CreateDoctorSchema,
   type CreateDoctorInput,
@@ -99,6 +100,284 @@ export async function getAdminDashboardStatsAction() {
     return {
       success: false,
       error: (error as Error).message || "Failed to load dashboard metrics.",
+    };
+  }
+}
+
+export interface DailyAppointmentStat {
+  date: string;
+  fullDate: string;
+  total: number;
+  completed: number;
+  confirmed: number;
+  noShow: number;
+  cancelled: number;
+}
+
+export interface DoctorUtilizationStat {
+  doctorId: string;
+  doctorName: string;
+  specialization: string;
+  bookedSlots: number;
+  availableSlots: number;
+  utilizationRate: number;
+}
+
+export interface WeeklyNoShowStat {
+  weekLabel: string;
+  startDate: string;
+  endDate: string;
+  noShowRate: number;
+  noShowCount: number;
+  completedCount: number;
+  totalFinished: number;
+}
+
+export interface AdminAnalyticsData {
+  summary: {
+    totalAppointments30d: number;
+    completedAppointments30d: number;
+    overallNoShowRate: number;
+    averageDoctorUtilization: number;
+    activeDoctorsCount: number;
+  };
+  dailyAppointments: DailyAppointmentStat[];
+  doctorUtilization: DoctorUtilizationStat[];
+  noShowTrend: WeeklyNoShowStat[];
+}
+
+// 1b. Comprehensive Practice Analytics View
+export async function getAdminAnalyticsAction(): Promise<AdminActionResult<AdminAnalyticsData>> {
+  try {
+    await ensureAdmin();
+
+    const now = new Date();
+
+    // -------------------------------------------------------------
+    // 1. Daily Volume over the last 30 days
+    // -------------------------------------------------------------
+    const thirtyDaysAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 29, 0, 0, 0, 0);
+    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+    const appointments30d = await prisma.appointment.findMany({
+      where: {
+        startTime: {
+          gte: thirtyDaysAgo,
+          lte: endOfToday,
+        },
+      },
+      select: {
+        id: true,
+        startTime: true,
+        status: true,
+      },
+    });
+
+    const dayBuckets: Record<string, DailyAppointmentStat> = {};
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+      const isoDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const displayDate = `${monthNames[d.getMonth()]} ${String(d.getDate()).padStart(2, "0")}`;
+
+      dayBuckets[isoDate] = {
+        date: displayDate,
+        fullDate: isoDate,
+        total: 0,
+        completed: 0,
+        confirmed: 0,
+        noShow: 0,
+        cancelled: 0,
+      };
+    }
+
+    appointments30d.forEach((appt) => {
+      const apptDate = new Date(appt.startTime);
+      const isoDate = `${apptDate.getFullYear()}-${String(apptDate.getMonth() + 1).padStart(2, "0")}-${String(apptDate.getDate()).padStart(2, "0")}`;
+      if (dayBuckets[isoDate]) {
+        dayBuckets[isoDate].total += 1;
+        if (appt.status === AppointmentStatus.COMPLETED) dayBuckets[isoDate].completed += 1;
+        else if (appt.status === AppointmentStatus.CONFIRMED || appt.status === AppointmentStatus.IN_PROGRESS)
+          dayBuckets[isoDate].confirmed += 1;
+        else if (appt.status === AppointmentStatus.NO_SHOW) dayBuckets[isoDate].noShow += 1;
+        else if (appt.status === AppointmentStatus.CANCELLED || appt.status === AppointmentStatus.NEEDS_RESCHEDULE)
+          dayBuckets[isoDate].cancelled += 1;
+      }
+    });
+
+    const dailyAppointments = Object.values(dayBuckets);
+
+    // -------------------------------------------------------------
+    // 2. Doctor Weekly Utilization (Current Week)
+    // -------------------------------------------------------------
+    const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday...
+    const diffToMonday = (dayOfWeek + 6) % 7;
+    const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diffToMonday, 0, 0, 0, 0);
+    const endOfWeek = new Date(startOfWeek.getFullYear(), startOfWeek.getMonth(), startOfWeek.getDate() + 6, 23, 59, 59, 999);
+
+    const doctors = await prisma.doctorProfile.findMany({
+      where: { isActive: true },
+      include: {
+        user: { select: { name: true } },
+        leaves: {
+          where: {
+            date: {
+              gte: startOfWeek,
+              lte: endOfWeek,
+            },
+          },
+        },
+        appointments: {
+          where: {
+            startTime: {
+              gte: startOfWeek,
+              lte: endOfWeek,
+            },
+            status: {
+              in: [
+                AppointmentStatus.CONFIRMED,
+                AppointmentStatus.IN_PROGRESS,
+                AppointmentStatus.COMPLETED,
+                AppointmentStatus.NO_SHOW,
+              ],
+            },
+          },
+          select: { id: true },
+        },
+      },
+    });
+
+    const dayKeys = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;
+
+    const doctorUtilization: DoctorUtilizationStat[] = doctors.map((doc) => {
+      const workingHours = doc.workingHours as unknown as Record<string, { enabled: boolean; start: string; end: string }> | null;
+      const slotDuration = doc.slotDurationMinutes || 30;
+      let totalAvailableSlots = 0;
+
+      for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+        const currentDate = new Date(startOfWeek.getFullYear(), startOfWeek.getMonth(), startOfWeek.getDate() + dayOffset);
+        const dayName = dayKeys[currentDate.getDay()];
+
+        // Check if doctor has a leave on this date
+        const hasLeave = doc.leaves.some((leave) => {
+          const lDate = new Date(leave.date);
+          return (
+            lDate.getFullYear() === currentDate.getFullYear() &&
+            lDate.getMonth() === currentDate.getMonth() &&
+            lDate.getDate() === currentDate.getDate()
+          );
+        });
+
+        if (!hasLeave && workingHours && workingHours[dayName]?.enabled) {
+          const sched = workingHours[dayName];
+          const [startH, startM] = sched.start.split(":").map(Number);
+          const [endH, endM] = sched.end.split(":").map(Number);
+          const minutesTotal = endH * 60 + endM - (startH * 60 + startM);
+          if (minutesTotal > 0) {
+            totalAvailableSlots += Math.floor(minutesTotal / slotDuration);
+          }
+        }
+      }
+
+      const bookedSlots = doc.appointments.length;
+      const effectiveAvailable = Math.max(totalAvailableSlots, 1);
+      const utilizationRate = Math.min(100, Math.round((bookedSlots / effectiveAvailable) * 100));
+
+      return {
+        doctorId: doc.id,
+        doctorName: doc.user.name,
+        specialization: doc.specialization,
+        bookedSlots,
+        availableSlots: totalAvailableSlots,
+        utilizationRate,
+      };
+    });
+
+    // -------------------------------------------------------------
+    // 3. No-Show Rate & 8-Week Historical Trend
+    // -------------------------------------------------------------
+    const eightWeeksAgo = new Date(startOfWeek.getFullYear(), startOfWeek.getMonth(), startOfWeek.getDate() - 7 * 7, 0, 0, 0, 0);
+
+    const finishedAppointments8w = await prisma.appointment.findMany({
+      where: {
+        startTime: {
+          gte: eightWeeksAgo,
+          lte: endOfToday,
+        },
+        status: {
+          in: [AppointmentStatus.COMPLETED, AppointmentStatus.NO_SHOW],
+        },
+      },
+      select: {
+        startTime: true,
+        status: true,
+      },
+    });
+
+    const noShowTrend: WeeklyNoShowStat[] = [];
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+    for (let w = 7; w >= 0; w--) {
+      const wStart = new Date(startOfWeek.getFullYear(), startOfWeek.getMonth(), startOfWeek.getDate() - w * 7, 0, 0, 0, 0);
+      const wEnd = new Date(wStart.getFullYear(), wStart.getMonth(), wStart.getDate() + 6, 23, 59, 59, 999);
+
+      const weekFinished = finishedAppointments8w.filter((a) => {
+        const t = new Date(a.startTime).getTime();
+        return t >= wStart.getTime() && t <= wEnd.getTime();
+      });
+
+      const noShowCount = weekFinished.filter((a) => a.status === AppointmentStatus.NO_SHOW).length;
+      const completedCount = weekFinished.filter((a) => a.status === AppointmentStatus.COMPLETED).length;
+      const totalFinished = noShowCount + completedCount;
+      const noShowRate = totalFinished > 0 ? Math.round((noShowCount / totalFinished) * 100) : 0;
+
+      const weekLabel = `${monthNames[wStart.getMonth()]} ${String(wStart.getDate()).padStart(2, "0")}`;
+
+      noShowTrend.push({
+        weekLabel,
+        startDate: wStart.toISOString(),
+        endDate: wEnd.toISOString(),
+        noShowRate,
+        noShowCount,
+        completedCount,
+        totalFinished,
+      });
+    }
+
+    // -------------------------------------------------------------
+    // 4. Overall Summary KPI Calculations
+    // -------------------------------------------------------------
+    const total30d = appointments30d.length;
+    const completed30d = appointments30d.filter((a) => a.status === AppointmentStatus.COMPLETED).length;
+    const noShow30d = appointments30d.filter((a) => a.status === AppointmentStatus.NO_SHOW).length;
+    const finished30d = completed30d + noShow30d;
+    const overallNoShowRate = finished30d > 0 ? Math.round((noShow30d / finished30d) * 100) : 0;
+
+    const avgDoctorUtilization =
+      doctorUtilization.length > 0
+        ? Math.round(doctorUtilization.reduce((sum, d) => sum + d.utilizationRate, 0) / doctorUtilization.length)
+        : 0;
+
+    return {
+      success: true,
+      data: {
+        summary: {
+          totalAppointments30d: total30d,
+          completedAppointments30d: completed30d,
+          overallNoShowRate,
+          averageDoctorUtilization: avgDoctorUtilization,
+          activeDoctorsCount: doctors.length,
+        },
+        dailyAppointments,
+        doctorUtilization,
+        noShowTrend,
+      },
+    };
+  } catch (error) {
+    console.error("Error in getAdminAnalyticsAction:", error);
+    return {
+      success: false,
+      error: (error as Error).message || "Failed to calculate analytics metrics.",
     };
   }
 }
@@ -348,8 +627,8 @@ export async function addDoctorLeaveAction(
         });
       }
 
-      // 2. Cascade update overlapping CONFIRMED appointments to NEEDS_RESCHEDULE
-      const updateResult = await tx.appointment.updateMany({
+      // 2. Find overlapping CONFIRMED appointments
+      const affectedAppointments = await tx.appointment.findMany({
         where: {
           doctorId,
           status: AppointmentStatus.CONFIRMED,
@@ -358,14 +637,46 @@ export async function addDoctorLeaveAction(
             lte: rangeEnd,
           },
         },
-        data: {
-          status: AppointmentStatus.NEEDS_RESCHEDULE,
+        include: {
+          patient: {
+            select: {
+              email: true,
+              name: true,
+            },
+          },
         },
       });
 
+      // 3. Cascade update overlapping CONFIRMED appointments to NEEDS_RESCHEDULE
+      if (affectedAppointments.length > 0) {
+        await tx.appointment.updateMany({
+          where: {
+            id: { in: affectedAppointments.map((a) => a.id) },
+          },
+          data: {
+            status: AppointmentStatus.NEEDS_RESCHEDULE,
+          },
+        });
+
+        // 4. Queue LEAVE_NOTICE EmailLogs for each patient
+        for (const appt of affectedAppointments) {
+          if (appt.patient.email) {
+            await tx.emailLog.create({
+              data: {
+                appointmentId: appt.id,
+                toEmail: appt.patient.email,
+                type: EmailType.LEAVE_NOTICE,
+                status: EmailStatus.PENDING,
+                attempts: 0,
+              },
+            });
+          }
+        }
+      }
+
       return {
         leaveCount: datesToInsert.length,
-        rescheduledCount: updateResult.count,
+        rescheduledCount: affectedAppointments.length,
       };
     });
 
@@ -376,7 +687,7 @@ export async function addDoctorLeaveAction(
       success: true,
       message:
         result.rescheduledCount > 0
-          ? `Leave registered for ${result.leaveCount} day(s). ${result.rescheduledCount} existing appointment(s) now need rescheduling.`
+          ? `Leave registered for ${result.leaveCount} day(s). ${result.rescheduledCount} conflicting appointment(s) flagged as Needs Reschedule and notice emails queued.`
           : `Leave registered for ${result.leaveCount} day(s) with 0 overlapping appointments.`,
       data: result,
     };
@@ -410,6 +721,114 @@ export async function deleteDoctorLeaveAction(leaveId: string): Promise<AdminAct
     return {
       success: false,
       error: (error as Error).message || "Failed to delete leave.",
+    };
+  }
+}
+
+// 7. Get Email Delivery Dashboard Stats & Dead Queue
+export async function getEmailDeliveryStatsAction() {
+  try {
+    await ensureAdmin();
+
+    const [sentCount, pendingCount, failedCount, deadCount, deadEmails] = await Promise.all([
+      prisma.emailLog.count({ where: { status: EmailStatus.SENT } }),
+      prisma.emailLog.count({ where: { status: EmailStatus.PENDING } }),
+      prisma.emailLog.count({ where: { status: EmailStatus.FAILED } }),
+      prisma.emailLog.count({ where: { status: EmailStatus.DEAD } }),
+      prisma.emailLog.findMany({
+        where: {
+          OR: [{ status: EmailStatus.DEAD }, { status: EmailStatus.FAILED }],
+        },
+        include: {
+          appointment: {
+            include: {
+              patient: { select: { name: true, email: true } },
+              doctor: { include: { user: { select: { name: true } } } },
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 50,
+      }),
+    ]);
+
+    return {
+      success: true,
+      data: {
+        stats: {
+          sent: sentCount,
+          pending: pendingCount,
+          failed: failedCount,
+          dead: deadCount,
+          total: sentCount + pendingCount + failedCount + deadCount,
+        },
+        deadEmails,
+      },
+    };
+  } catch (error) {
+    console.error("Error in getEmailDeliveryStatsAction:", error);
+    return {
+      success: false,
+      error: (error as Error).message || "Failed to load email delivery metrics.",
+    };
+  }
+}
+
+// 8. Retry Dead / Failed Email
+export async function retryDeadEmailAction(emailLogId: string): Promise<AdminActionResult> {
+  try {
+    await ensureAdmin();
+
+    const email = await prisma.emailLog.findUnique({
+      where: { id: emailLogId },
+    });
+
+    if (!email) {
+      return { success: false, error: "Email log record not found." };
+    }
+
+    await prisma.emailLog.update({
+      where: { id: emailLogId },
+      data: {
+        status: EmailStatus.PENDING,
+        attempts: 0,
+        lastError: null,
+      },
+    });
+
+    revalidatePath("/admin");
+
+    return {
+      success: true,
+      message: `Email to ${email.toEmail} reset to PENDING and queued for delivery.`,
+    };
+  } catch (error) {
+    console.error("Error in retryDeadEmailAction:", error);
+    return {
+      success: false,
+      error: (error as Error).message || "Failed to reset email.",
+    };
+  }
+}
+
+// 9. Manual Trigger for Email Queue Processing
+export async function triggerProcessEmailQueueAction(): Promise<AdminActionResult> {
+  try {
+    await ensureAdmin();
+
+    const result = await processEmailQueue(50);
+    revalidatePath("/admin");
+
+    return {
+      success: true,
+      message: `Processed ${result.processed} email(s): ${result.sent} sent, ${result.failed} failed, ${result.dead} dead.`,
+      data: result,
+    };
+  } catch (error) {
+    console.error("Error in triggerProcessEmailQueueAction:", error);
+    return {
+      success: false,
+      error: (error as Error).message || "Failed to process email queue.",
     };
   }
 }

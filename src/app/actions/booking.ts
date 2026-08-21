@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { AppointmentStatus, Role } from "@prisma/client";
+import { AppointmentStatus, Role, EmailType, EmailStatus } from "@prisma/client";
 import {
   GetSlotsQuerySchema,
   type GetSlotsQueryInput,
@@ -23,6 +23,11 @@ import {
   getAllDoctorHolds,
 } from "@/lib/redis";
 import { WorkingHours, DaySchedule } from "@/lib/validations/admin";
+import { processAppointmentPreVisitSummary } from "@/lib/gemini";
+import {
+  syncAppointmentToGoogleCalendar,
+  deleteAppointmentFromGoogleCalendar,
+} from "@/lib/google-calendar";
 
 export type BookingActionResult<T = unknown> = {
   success: boolean;
@@ -475,6 +480,14 @@ export async function confirmBookingAction(
     // 2. Fetch Doctor Profile to determine slot end time
     const doctor = await prisma.doctorProfile.findUnique({
       where: { id: doctorId },
+      include: {
+        user: {
+          select: {
+            email: true,
+            name: true,
+          },
+        },
+      },
     });
 
     if (!doctor || !doctor.isActive) {
@@ -504,7 +517,7 @@ export async function confirmBookingAction(
           throw new Error("CONFLICT_SLOT_TAKEN");
         }
 
-        return await tx.appointment.create({
+        const newAppt = await tx.appointment.create({
           data: {
             doctorId,
             patientId: user.id,
@@ -512,15 +525,52 @@ export async function confirmBookingAction(
             endTime,
             status: AppointmentStatus.CONFIRMED,
             symptomText: symptomText.trim(),
+            preVisitSummaryStatus: "PENDING",
           },
         });
+
+        // 3a. Queue BOOKING_CONFIRMATION EmailLog for Patient
+        if (user.email) {
+          await tx.emailLog.create({
+            data: {
+              appointmentId: newAppt.id,
+              toEmail: user.email,
+              type: EmailType.BOOKING_CONFIRMATION,
+              status: EmailStatus.PENDING,
+              attempts: 0,
+            },
+          });
+        }
+
+        // 3b. Queue BOOKING_CONFIRMATION EmailLog for Doctor
+        if (doctor.user.email) {
+          await tx.emailLog.create({
+            data: {
+              appointmentId: newAppt.id,
+              toEmail: doctor.user.email,
+              type: EmailType.BOOKING_CONFIRMATION,
+              status: EmailStatus.PENDING,
+              attempts: 0,
+            },
+          });
+        }
+
+        return newAppt;
       });
 
       // 4. Success: Clear Redis hold
       await deleteSlotHold(doctorId, isoStartTime);
 
+      // 5. Trigger async Pre-Visit AI Intake summary generation (non-blocking background task)
+      void processAppointmentPreVisitSummary(appointment.id, symptomText.trim());
+
+      // 6. Trigger async Google Calendar synchronization (for connected patient and/or doctor)
+      void syncAppointmentToGoogleCalendar(appointment.id);
+
       revalidatePath("/patient/appointments");
       revalidatePath("/admin");
+      revalidatePath("/doctor");
+      revalidatePath("/doctor/schedule");
 
       return {
         success: true,
@@ -615,6 +665,90 @@ export async function getPatientAppointmentsAction() {
     return {
       success: false,
       error: (error as Error).message || "Failed to load patient appointments.",
+    };
+  }
+}
+
+// 8. Cancel Appointment & Queue Cancellation EmailLogs
+export async function cancelAppointmentAction(
+  appointmentId: string,
+  reason?: string
+): Promise<BookingActionResult> {
+  try {
+    const user = await ensureAuthenticated();
+
+    const appointment = await prisma.appointment.findUnique({
+      where: { id: appointmentId },
+      include: {
+        patient: { select: { id: true, email: true, name: true } },
+        doctor: { include: { user: { select: { id: true, email: true, name: true } } } },
+      },
+    });
+
+    if (!appointment) {
+      return { success: false, error: "Appointment not found." };
+    }
+
+    // Ensure authorized (Patient, Doctor, or Admin)
+    const isOwnerPatient = appointment.patientId === user.id;
+    const isOwnerDoctor = appointment.doctor.user.id === user.id;
+    const isAdmin = user.role === Role.ADMIN;
+
+    if (!isOwnerPatient && !isOwnerDoctor && !isAdmin) {
+      return { success: false, error: "Unauthorized to cancel this appointment." };
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // 1. Update appointment status
+      await tx.appointment.update({
+        where: { id: appointmentId },
+        data: { status: AppointmentStatus.CANCELLED },
+      });
+
+      // 2. Queue CANCELLATION EmailLog for Patient
+      if (appointment.patient.email) {
+        await tx.emailLog.create({
+          data: {
+            appointmentId: appointment.id,
+            toEmail: appointment.patient.email,
+            type: EmailType.CANCELLATION,
+            status: EmailStatus.PENDING,
+            attempts: 0,
+          },
+        });
+      }
+
+      // 3. Queue CANCELLATION EmailLog for Doctor
+      if (appointment.doctor.user.email) {
+        await tx.emailLog.create({
+          data: {
+            appointmentId: appointment.id,
+            toEmail: appointment.doctor.user.email,
+            type: EmailType.CANCELLATION,
+            status: EmailStatus.PENDING,
+            attempts: 0,
+          },
+        });
+      }
+    });
+
+    // 4. Trigger async Google Calendar event deletion
+    void deleteAppointmentFromGoogleCalendar(appointmentId);
+
+    revalidatePath("/patient/appointments");
+    revalidatePath("/doctor/schedule");
+    revalidatePath("/doctor");
+    revalidatePath("/admin");
+
+    return {
+      success: true,
+      message: "Consultation successfully cancelled.",
+    };
+  } catch (error) {
+    console.error("Error in cancelAppointmentAction:", error);
+    return {
+      success: false,
+      error: (error as Error).message || "Failed to cancel appointment.",
     };
   }
 }

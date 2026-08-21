@@ -1,32 +1,37 @@
-import { Calendar, Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { redirect } from "next/navigation";
+import { auth } from "@/auth";
+import { Role } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import { getDoctorLeavesAction } from "@/app/actions/doctor";
+import { DoctorLeaveView } from "@/components/doctor/doctor-leave-view";
 
-export default function DoctorLeavesPage() {
+export default async function DoctorLeavesPage() {
+  const session = await auth();
+
+  if (!session?.user) {
+    redirect("/login?callbackUrl=/doctor/leaves");
+  }
+
+  if (session.user.role !== Role.DOCTOR && session.user.role !== Role.ADMIN) {
+    redirect("/");
+  }
+
+  const doctorProfile = await prisma.doctorProfile.findUnique({
+    where: { userId: session.user.id },
+  });
+
+  const targetDoctorId = doctorProfile?.id || (await prisma.doctorProfile.findFirst())?.id;
+
+  if (!targetDoctorId) {
+    redirect("/doctor/schedule");
+  }
+
+  const leavesRes = await getDoctorLeavesAction();
+  const initialLeaves = leavesRes.success && leavesRes.data ? (leavesRes.data as any) : [];
+
   return (
-    <div className="container mx-auto max-w-6xl px-4 py-8 space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Leave &amp; Blackout Dates</h1>
-          <p className="text-sm text-muted-foreground">
-            Block off days for conferences, vacation, or emergency leaves to automatically close booking slots.
-          </p>
-        </div>
-        <Button className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
-          Request Leave
-        </Button>
-      </div>
-
-      <Card className="border-dashed">
-        <CardContent className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
-          <Calendar className="h-10 w-10 mb-3 opacity-50" />
-          <CardTitle className="text-base font-semibold text-foreground">No Upcoming Leaves</CardTitle>
-          <p className="text-xs max-w-sm mt-1">
-            You currently have no scheduled leave dates. Any registered leaves will prevent patients from booking overlapping slots.
-          </p>
-        </CardContent>
-      </Card>
+    <div className="container mx-auto max-w-5xl px-4 py-8">
+      <DoctorLeaveView initialLeaves={initialLeaves} doctorId={targetDoctorId} />
     </div>
   );
 }

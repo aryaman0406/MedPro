@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { registerUserAction } from "@/app/actions/auth";
+import { PageTransition } from "@/components/ui/page-transition";
 
 const COMMON_SPECIALIZATIONS = [
   "General Medicine",
@@ -75,7 +76,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center px-4 py-12">
+    <PageTransition className="flex min-h-[calc(100vh-8rem)] items-center justify-center px-4 py-12">
       <div className="w-full max-w-lg space-y-6">
         <div className="text-center space-y-2">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-md">
@@ -261,6 +262,6 @@ export default function RegisterPage() {
           </form>
         </Card>
       </div>
-    </div>
+    </PageTransition>
   );
 }

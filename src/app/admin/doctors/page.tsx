@@ -14,6 +14,7 @@ import { AddDoctorDialog } from "@/components/admin/add-doctor-dialog";
 import { DoctorDetailSheet, DoctorWithProfile } from "@/components/admin/doctor-detail-sheet";
 import { getDoctorsAction } from "@/app/actions/admin";
 import { WorkingHours } from "@/lib/validations/admin";
+import { PageTransition } from "@/components/ui/page-transition";
 
 export default function AdminDoctorsPage() {
   const [doctors, setDoctors] = React.useState<DoctorWithProfile[]>([]);
@@ -78,7 +79,7 @@ export default function AdminDoctorsPage() {
   const specializations = ["ALL", ...Array.from(new Set(doctors.map((d) => d.specialization)))];
 
   return (
-    <div className="container mx-auto max-w-7xl px-4 py-8 space-y-6">
+    <PageTransition className="container mx-auto max-w-7xl px-4 py-8 space-y-6">
       {/* Header & Add Doctor Button */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -247,6 +248,6 @@ export default function AdminDoctorsPage() {
         onOpenChange={setSheetOpen}
         onDoctorUpdated={fetchDoctors}
       />
-    </div>
+    </PageTransition>
   );
 }

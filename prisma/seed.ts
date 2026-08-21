@@ -150,6 +150,7 @@ async function main() {
     },
   ];
 
+  const createdPatients = [];
   for (const pat of patientsData) {
     const user = await prisma.user.create({
       data: {
@@ -160,10 +161,126 @@ async function main() {
         phone: pat.phone,
       },
     });
+    createdPatients.push(user);
     console.log(`✅ Seeded Patient: ${user.name} - ${user.email} (Password: PatientPass123!)`);
   }
 
-  console.log("🎉 Database seeding completed successfully!");
+  // 4. Create Varied Historical & Upcoming Appointments for Practice Analytics
+  console.log("📊 Seeding rich 30-day appointment history across specialists...");
+  const allDoctors = await prisma.doctorProfile.findMany({ include: { user: true } });
+
+  const now = new Date();
+  const sampleSymptoms = [
+    "Routine cardiovascular health check and resting blood pressure evaluation.",
+    "Occasional sharp chest discomfort following moderate aerobic exercise.",
+    "Severe throbbing unilateral headache accompanied by sensitivity to light.",
+    "Persistent neck stiffness and morning migraine symptoms.",
+    "Annual wellness pediatric examination and routine developmental checkup.",
+    "Mild dry cough and seasonal allergy symptoms.",
+  ];
+
+  // A. Generate Past 30 Days appointments (COMPLETED and NO_SHOW)
+  for (let daysAgo = 28; daysAgo >= 1; daysAgo--) {
+    const apptDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysAgo);
+
+    // Skip Sundays
+    if (apptDate.getDay() === 0) continue;
+
+    for (let docIdx = 0; docIdx < allDoctors.length; docIdx++) {
+      const doc = allDoctors[docIdx];
+      const patient = createdPatients[(daysAgo + docIdx) % createdPatients.length];
+
+      // 1 to 3 appointments per doctor per day
+      const count = ((daysAgo * 3 + docIdx) % 3) + 1;
+
+      for (let slotIdx = 0; slotIdx < count; slotIdx++) {
+        const startH = 9 + slotIdx * 2;
+        const startTime = new Date(apptDate.getFullYear(), apptDate.getMonth(), apptDate.getDate(), startH, 0, 0);
+        const endTime = new Date(startTime.getTime() + (doc.slotDurationMinutes || 30) * 60 * 1000);
+
+        // ~15% NO_SHOW rate, otherwise COMPLETED
+        const isNoShow = (daysAgo + slotIdx + docIdx) % 7 === 0;
+
+        await prisma.appointment.create({
+          data: {
+            doctorId: doc.id,
+            patientId: patient.id,
+            startTime,
+            endTime,
+            status: isNoShow ? "NO_SHOW" : "COMPLETED",
+            symptomText: sampleSymptoms[(daysAgo + slotIdx) % sampleSymptoms.length],
+            preVisitSummaryStatus: "COMPLETED",
+            preVisitSummaryJson: {
+              urgency: isNoShow ? "Low" : slotIdx === 0 ? "High" : "Medium",
+              chiefComplaint: isNoShow ? "Follow-up missed" : "Evaluated and treated",
+              suggestedQuestions: [
+                "How long have symptoms persisted?",
+                "Are medications taken consistently?",
+                "Any adverse reactions noted?",
+              ],
+            },
+            postVisitNotes: isNoShow
+              ? null
+              : "Patient examined. Vital signs stable. Treatment plan discussed and prescription issued.",
+            postVisitSummaryStatus: isNoShow ? "PENDING" : "COMPLETED",
+            postVisitSummaryJson: isNoShow
+              ? undefined
+              : {
+                  plainSummary: "General wellness check completed. Vitals are within normal limits.",
+                  medicationSchedule: [
+                    { medicine: "Metoprolol 25mg", whenToTake: "Morning with food", durationDays: 30 },
+                  ],
+                  followUpSteps: ["Return in 3 months for routine monitoring."],
+                },
+            prescriptionJson: isNoShow
+              ? undefined
+              : [
+                  {
+                    medicineName: "Metoprolol",
+                    dosage: "25mg",
+                    frequencyPerDay: 1,
+                    durationDays: 30,
+                    instructions: "Take once daily in morning",
+                  },
+                ],
+          },
+        });
+      }
+    }
+  }
+
+  // B. Generate Today's & Upcoming Confirmed Appointments
+  for (let dayOffset = 0; dayOffset <= 4; dayOffset++) {
+    const apptDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + dayOffset);
+    if (apptDate.getDay() === 0) continue;
+
+    for (let docIdx = 0; docIdx < allDoctors.length; docIdx++) {
+      const doc = allDoctors[docIdx];
+      const patient = createdPatients[(dayOffset + docIdx) % createdPatients.length];
+
+      const startTime = new Date(apptDate.getFullYear(), apptDate.getMonth(), apptDate.getDate(), 10 + docIdx * 2, 0, 0);
+      const endTime = new Date(startTime.getTime() + (doc.slotDurationMinutes || 30) * 60 * 1000);
+
+      await prisma.appointment.create({
+        data: {
+          doctorId: doc.id,
+          patientId: patient.id,
+          startTime,
+          endTime,
+          status: "CONFIRMED",
+          symptomText: sampleSymptoms[docIdx % sampleSymptoms.length],
+          preVisitSummaryStatus: "COMPLETED",
+          preVisitSummaryJson: {
+            urgency: docIdx === 0 ? "High" : "Medium",
+            chiefComplaint: "Scheduled consultation",
+            suggestedQuestions: ["Review recent laboratory metrics."],
+          },
+        },
+      });
+    }
+  }
+
+  console.log("🎉 Database seeding completed successfully with full 30-day analytics dataset!");
 }
 
 main()

@@ -1,0 +1,319 @@
+import nodemailer from "nodemailer";
+import { prisma } from "@/lib/prisma";
+import { EmailStatus, EmailType } from "@prisma/client";
+import {
+  renderBookingConfirmationEmail,
+  renderAppointmentReminderEmail,
+  renderCancellationEmail,
+  renderLeaveNoticeEmail,
+  renderMedicationReminderEmail,
+} from "@/lib/email/templates";
+import { generateRescheduleToken } from "@/lib/tokens";
+
+// App Base URL for links
+const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+
+/**
+ * Configure Nodemailer Transport for Brevo SMTP
+ */
+function createTransporter() {
+  const host = process.env.BREVO_SMTP_HOST || "smtp-relay.brevo.com";
+  const port = Number(process.env.BREVO_SMTP_PORT) || 587;
+  const user = process.env.BREVO_SMTP_USER;
+  const pass = process.env.BREVO_SMTP_KEY;
+
+  if (!user || !pass) {
+    console.warn("⚠️ Brevo SMTP credentials (BREVO_SMTP_USER / BREVO_SMTP_KEY) not configured.");
+  }
+
+  return nodemailer.createTransport({
+    host,
+    port,
+    secure: port === 465,
+    auth: user && pass ? { user, pass } : undefined,
+    // Sensible timeout
+    connectionTimeout: 10000,
+  });
+}
+
+/**
+ * Low-level email dispatcher
+ */
+export async function sendEmail({
+  to,
+  subject,
+  html,
+  text,
+}: {
+  to: string;
+  subject: string;
+  html: string;
+  text?: string;
+}): Promise<{ messageId?: string }> {
+  const transporter = createTransporter();
+  const from = process.env.EMAIL_FROM || '"MedTrack Pro" <no-reply@medtrack.pro>';
+
+  const info = await transporter.sendMail({
+    from,
+    to,
+    subject,
+    html,
+    text,
+  });
+
+  return { messageId: info.messageId };
+}
+
+export interface EmailProcessResult {
+  emailLogId: string;
+  toEmail: string;
+  type: EmailType;
+  success: boolean;
+  error?: string;
+  status: EmailStatus;
+}
+
+/**
+ * Unified Email Queue Processor
+ * Finds pending and retriable failed emails, renders templates, and sends via Brevo SMTP
+ */
+export async function processEmailQueue(
+  batchLimit = 50
+): Promise<{
+  processed: number;
+  sent: number;
+  failed: number;
+  dead: number;
+  results: EmailProcessResult[];
+}> {
+  // Query all PENDING or retryable FAILED emails (attempts < 5)
+  const pendingEmails = await prisma.emailLog.findMany({
+    where: {
+      OR: [
+        { status: EmailStatus.PENDING },
+        { status: EmailStatus.FAILED, attempts: { lt: 5 } },
+      ],
+    },
+    include: {
+      appointment: {
+        include: {
+          patient: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true,
+            },
+          },
+          doctor: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+              },
+            },
+          },
+          medicationReminders: {
+            take: 1,
+            orderBy: { scheduledFor: "desc" },
+          },
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "asc",
+    },
+    take: batchLimit,
+  });
+
+  let sent = 0;
+  let failed = 0;
+  let dead = 0;
+  const results: EmailProcessResult[] = [];
+
+  for (const emailLog of pendingEmails) {
+    const attempts = emailLog.attempts + 1;
+
+    try {
+      const appt = emailLog.appointment;
+      let subject = "MedTrack Pro Notification";
+      let html = `<p>MedTrack Pro Notification</p>`;
+      let text = "MedTrack Pro Notification";
+
+      // Build content according to EmailType
+      switch (emailLog.type) {
+        case EmailType.BOOKING_CONFIRMATION: {
+          if (!appt) throw new Error("Associated appointment not found for booking confirmation email.");
+
+          const isDoctorRecipient = emailLog.toEmail === appt.doctor.user.email;
+          const rendered = renderBookingConfirmationEmail({
+            isDoctor: isDoctorRecipient,
+            patientName: appt.patient.name,
+            patientEmail: appt.patient.email,
+            doctorName: appt.doctor.user.name,
+            specialization: appt.doctor.specialization,
+            startTime: new Date(appt.startTime),
+            endTime: new Date(appt.endTime),
+            symptomText: appt.symptomText,
+            portalUrl: isDoctorRecipient
+              ? `${baseUrl}/doctor/appointments/${appt.id}`
+              : `${baseUrl}/patient/appointments`,
+          });
+          subject = rendered.subject;
+          html = rendered.html;
+          text = rendered.text;
+          break;
+        }
+
+        case EmailType.REMINDER: {
+          if (!appt) throw new Error("Associated appointment not found for reminder email.");
+
+          const rendered = renderAppointmentReminderEmail({
+            patientName: appt.patient.name,
+            doctorName: appt.doctor.user.name,
+            specialization: appt.doctor.specialization,
+            startTime: new Date(appt.startTime),
+            endTime: new Date(appt.endTime),
+            portalUrl: `${baseUrl}/patient/appointments`,
+          });
+          subject = rendered.subject;
+          html = rendered.html;
+          text = rendered.text;
+          break;
+        }
+
+        case EmailType.CANCELLATION: {
+          if (!appt) throw new Error("Associated appointment not found for cancellation email.");
+
+          const isDoctorRecipient = emailLog.toEmail === appt.doctor.user.email;
+          const rendered = renderCancellationEmail({
+            isDoctor: isDoctorRecipient,
+            patientName: appt.patient.name,
+            doctorName: appt.doctor.user.name,
+            startTime: new Date(appt.startTime),
+            portalUrl: `${baseUrl}/patient/find-doctor`,
+          });
+          subject = rendered.subject;
+          html = rendered.html;
+          text = rendered.text;
+          break;
+        }
+
+        case EmailType.LEAVE_NOTICE: {
+          if (!appt) throw new Error("Associated appointment not found for leave notice email.");
+
+          // Generate 7-day magic token for passwordless rescheduling
+          const token = await generateRescheduleToken({
+            appointmentId: appt.id,
+            patientId: appt.patientId,
+            doctorId: appt.doctorId,
+            email: emailLog.toEmail,
+          });
+
+          const rescheduleUrl = `${baseUrl}/reschedule/${token}`;
+
+          const rendered = renderLeaveNoticeEmail({
+            patientName: appt.patient.name,
+            doctorName: appt.doctor.user.name,
+            specialization: appt.doctor.specialization,
+            originalDate: new Date(appt.startTime),
+            rescheduleUrl,
+          });
+          subject = rendered.subject;
+          html = rendered.html;
+          text = rendered.text;
+          break;
+        }
+
+        case EmailType.MEDICATION_REMINDER: {
+          const patientName = appt?.patient.name || "Patient";
+          const reminderInfo = appt?.medicationReminders?.[0];
+          const medicineName = reminderInfo?.medicineName || "Prescribed Medication";
+          const dosage = reminderInfo?.dosage || null;
+          const instructions = reminderInfo?.instructions || null;
+
+          const rendered = renderMedicationReminderEmail({
+            patientName,
+            medicineName,
+            dosage,
+            instructions,
+            portalUrl: `${baseUrl}/patient/appointments`,
+          });
+          subject = rendered.subject;
+          html = rendered.html;
+          text = rendered.text;
+          break;
+        }
+
+        default:
+          throw new Error(`Unsupported email type: ${emailLog.type}`);
+      }
+
+      // Dispatch email via Nodemailer
+      await sendEmail({
+        to: emailLog.toEmail,
+        subject,
+        html,
+        text,
+      });
+
+      // Mark SENT on success
+      await prisma.emailLog.update({
+        where: { id: emailLog.id },
+        data: {
+          status: EmailStatus.SENT,
+          lastError: null,
+        },
+      });
+
+      sent++;
+      results.push({
+        emailLogId: emailLog.id,
+        toEmail: emailLog.toEmail,
+        type: emailLog.type,
+        success: true,
+        status: EmailStatus.SENT,
+      });
+    } catch (err: unknown) {
+      const errorMsg = (err as Error)?.message || "Failed to dispatch email.";
+      console.error(`[Email Queue] Failed to send email [${emailLog.id}] to ${emailLog.toEmail}:`, errorMsg);
+
+      const nextStatus = attempts >= 5 ? EmailStatus.DEAD : EmailStatus.FAILED;
+
+      await prisma.emailLog.update({
+        where: { id: emailLog.id },
+        data: {
+          attempts,
+          lastError: errorMsg,
+          status: nextStatus,
+        },
+      });
+
+      if (nextStatus === EmailStatus.DEAD) {
+        dead++;
+      } else {
+        failed++;
+      }
+
+      results.push({
+        emailLogId: emailLog.id,
+        toEmail: emailLog.toEmail,
+        type: emailLog.type,
+        success: false,
+        error: errorMsg,
+        status: nextStatus,
+      });
+    }
+  }
+
+  return {
+    processed: pendingEmails.length,
+    sent,
+    failed,
+    dead,
+    results,
+  };
+}

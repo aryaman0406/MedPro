@@ -110,12 +110,50 @@ export default async function BookingConfirmationPage({
             </p>
           </div>
 
-          <div className="rounded-lg bg-primary/5 p-3 flex items-center gap-2 text-xs text-primary border border-primary/20">
-            <Sparkles className="h-4 w-4 shrink-0" />
-            <span>
-              Pre-visit AI intake summary and email confirmations will be processed automatically prior to your consultation.
-            </span>
-          </div>
+          {/* AI Intake Summary Status */}
+          {appointment.preVisitSummaryStatus === "COMPLETED" && appointment.preVisitSummaryJson ? (
+            <div className="rounded-lg bg-emerald-500/10 p-3.5 flex flex-col gap-1.5 text-xs border border-emerald-500/20">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
+                  <Sparkles className="h-4 w-4" /> Pre-Visit AI Intake Analysis Complete
+                </span>
+                <Badge
+                  variant={
+                    (appointment.preVisitSummaryJson as any).urgency === "High"
+                      ? "destructive"
+                      : (appointment.preVisitSummaryJson as any).urgency === "Medium"
+                      ? "outline"
+                      : "secondary"
+                  }
+                  className={
+                    (appointment.preVisitSummaryJson as any).urgency === "Medium"
+                      ? "border-amber-500/50 text-amber-600 bg-amber-500/10"
+                      : ""
+                  }
+                >
+                  Urgency: {(appointment.preVisitSummaryJson as any).urgency}
+                </Badge>
+              </div>
+              <p className="text-muted-foreground">
+                <strong className="text-foreground">Chief Complaint:</strong>{" "}
+                {(appointment.preVisitSummaryJson as any).chiefComplaint}
+              </p>
+            </div>
+          ) : appointment.preVisitSummaryStatus === "FAILED" ? (
+            <div className="rounded-lg bg-muted/60 p-3 flex items-center gap-2 text-xs text-muted-foreground border">
+              <Sparkles className="h-4 w-4 shrink-0 opacity-50" />
+              <span>
+                Pre-visit intake summary unavailable. Your raw symptom details will be reviewed directly by your doctor.
+              </span>
+            </div>
+          ) : (
+            <div className="rounded-lg bg-blue-500/10 p-3 flex items-center gap-2 text-xs text-blue-700 dark:text-blue-300 border border-blue-500/20">
+              <Sparkles className="h-4 w-4 shrink-0 animate-spin" />
+              <span>
+                AI summary generating... Your clinical intake brief and consultation questions are being prepared.
+              </span>
+            </div>
+          )}
         </CardContent>
 
         <CardFooter className="flex flex-col sm:flex-row gap-3 pt-2">

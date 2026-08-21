@@ -3,7 +3,24 @@
 import * as React from "react";
 import Link from "next/link";
 import { format } from "date-fns";
-import { AlertTriangle, Calendar, CalendarPlus, CheckCircle2, Clock, FileText, Loader2, RefreshCw, Stethoscope, User } from "lucide-react";
+import {
+  AlertTriangle,
+  Calendar,
+  CalendarPlus,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Clock,
+  FileText,
+  HeartPulse,
+  HelpCircle,
+  Loader2,
+  Pill,
+  RefreshCw,
+  Sparkles,
+  Stethoscope,
+  User,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -13,14 +30,25 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getPatientAppointmentsAction } from "@/app/actions/booking";
 import { AppointmentStatus } from "@prisma/client";
+import { PostVisitSummaryData, PrescriptionItem } from "@/lib/validations/ai";
+import { GoogleCalendarCard } from "@/components/calendar/google-calendar-card";
+import { PatientQueueCard } from "@/components/patient/patient-queue-card";
+import { PageTransition } from "@/components/ui/page-transition";
 
 interface PatientAppointment {
   id: string;
+  doctorId: string;
   startTime: Date | string;
   endTime: Date | string;
   status: AppointmentStatus;
   symptomText: string;
+  checkedInAt?: Date | string | null;
+  postVisitNotes?: string | null;
+  postVisitSummaryStatus?: string | null;
+  postVisitSummaryJson?: any;
+  prescriptionJson?: any;
   doctor: {
+    id: string;
     specialization: string;
     user: {
       name: string;
@@ -28,6 +56,132 @@ interface PatientAppointment {
       phone?: string | null;
     };
   };
+}
+
+function CompletedVisitCarePlan({ appt }: { appt: PatientAppointment }) {
+  const postSummary = appt.postVisitSummaryJson as PostVisitSummaryData | null;
+  const prescriptions = appt.prescriptionJson as PrescriptionItem[] | null;
+  const [expanded, setExpanded] = React.useState(true);
+
+  if (!postSummary && !appt.postVisitNotes && (!prescriptions || prescriptions.length === 0)) {
+    return null;
+  }
+
+  return (
+    <div className="rounded-xl border border-primary/20 bg-primary/[0.02] p-4 space-y-4 text-xs mt-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-primary font-bold">
+          <HeartPulse className="h-4 w-4 text-primary" />
+          <span>Post-Consultation Care Plan &amp; Summary</span>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setExpanded(!expanded)}
+          className="h-7 text-[11px] gap-1 text-muted-foreground hover:text-foreground"
+        >
+          {expanded ? (
+            <>
+              Hide Details <ChevronUp className="h-3.5 w-3.5" />
+            </>
+          ) : (
+            <>
+              View Care Plan <ChevronDown className="h-3.5 w-3.5" />
+            </>
+          )}
+        </Button>
+      </div>
+
+      {expanded && (
+        <div className="space-y-4 pt-1 animate-in fade-in-50 duration-200">
+          {/* Patient-Friendly Plain Summary */}
+          {postSummary?.plainSummary ? (
+            <div className="rounded-xl bg-card border p-3.5 space-y-1">
+              <span className="font-semibold text-foreground flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-primary">
+                <Sparkles className="h-3.5 w-3.5" /> Doctor&apos;s Summary
+              </span>
+              <p className="text-muted-foreground leading-relaxed text-xs">
+                {postSummary.plainSummary}
+              </p>
+            </div>
+          ) : appt.postVisitNotes ? (
+            <div className="rounded-xl bg-card border p-3.5 space-y-1">
+              <span className="font-semibold text-foreground flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-primary">
+                <FileText className="h-3.5 w-3.5" /> Doctor&apos;s Notes
+              </span>
+              <p className="text-muted-foreground leading-relaxed text-xs">
+                {appt.postVisitNotes}
+              </p>
+            </div>
+          ) : null}
+
+          {/* Medication Schedule */}
+          {postSummary?.medicationSchedule && postSummary.medicationSchedule.length > 0 ? (
+            <div className="space-y-2">
+              <span className="font-bold text-foreground flex items-center gap-1.5">
+                <Pill className="h-3.5 w-3.5 text-primary" /> Medication Schedule:
+              </span>
+              <div className="divide-y rounded-xl border bg-card overflow-hidden">
+                {postSummary.medicationSchedule.map((item, idx) => (
+                  <div key={idx} className="p-3 flex items-start justify-between gap-3">
+                    <div>
+                      <span className="font-bold text-foreground text-xs">{item.medicine}</span>
+                      <p className="text-muted-foreground text-[11px] mt-0.5">{item.whenToTake}</p>
+                    </div>
+                    <Badge variant="secondary" className="text-[10px] shrink-0 font-medium">
+                      {item.durationDays} day(s)
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : prescriptions && prescriptions.length > 0 ? (
+            <div className="space-y-2">
+              <span className="font-bold text-foreground flex items-center gap-1.5">
+                <Pill className="h-3.5 w-3.5 text-primary" /> Prescriptions:
+              </span>
+              <div className="divide-y rounded-xl border bg-card overflow-hidden">
+                {prescriptions.map((rx, idx) => (
+                  <div key={idx} className="p-3 flex items-start justify-between gap-3">
+                    <div>
+                      <span className="font-bold text-foreground text-xs">
+                        {rx.medicineName} ({rx.dosage})
+                      </span>
+                      {rx.instructions && (
+                        <p className="text-muted-foreground text-[11px] mt-0.5">{rx.instructions}</p>
+                      )}
+                    </div>
+                    <Badge variant="secondary" className="text-[10px] shrink-0">
+                      {rx.frequencyPerDay}x daily • {rx.durationDays} days
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {/* Follow-up Steps */}
+          {postSummary?.followUpSteps && postSummary.followUpSteps.length > 0 && (
+            <div className="space-y-2">
+              <span className="font-bold text-foreground flex items-center gap-1.5">
+                <CheckCircle2 className="h-3.5 w-3.5 text-primary" /> Next Steps &amp; Follow-up:
+              </span>
+              <div className="space-y-1.5">
+                {postSummary.followUpSteps.map((step, idx) => (
+                  <div key={idx} className="flex items-start gap-2.5 rounded-lg border bg-card p-2.5 text-xs text-muted-foreground">
+                    <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-[9px] mt-0.5">
+                      {idx + 1}
+                    </span>
+                    <span className="text-foreground font-medium">{step}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function PatientAppointmentsPage() {
@@ -63,7 +217,7 @@ export default function PatientAppointmentsPage() {
       case "NEEDS_RESCHEDULE":
         return <Badge variant="warning" className="text-[10px] uppercase font-bold tracking-wider">Needs Reschedule</Badge>;
       case "COMPLETED":
-        return <Badge variant="secondary" className="text-[10px] uppercase font-bold tracking-wider">Completed</Badge>;
+        return <Badge variant="secondary" className="text-[10px] uppercase font-bold tracking-wider bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30">Completed</Badge>;
       case "CANCELLED":
         return <Badge variant="destructive" className="text-[10px] uppercase font-bold tracking-wider">Cancelled</Badge>;
       case "NO_SHOW":
@@ -76,6 +230,7 @@ export default function PatientAppointmentsPage() {
   const renderAppointmentCard = (appt: PatientAppointment) => {
     const startTimeObj = new Date(appt.startTime);
     const endTimeObj = new Date(appt.endTime);
+    const isCompleted = appt.status === "COMPLETED";
 
     return (
       <Card key={appt.id} className="hover:border-primary/40 transition-all shadow-sm">
@@ -129,19 +284,32 @@ export default function PatientAppointmentsPage() {
               </span>
             </div>
           )}
+
+          {/* Live Check-In & Real-Time Queue Position Tracker */}
+          <PatientQueueCard
+            appointmentId={appt.id}
+            doctorId={appt.doctorId || appt.doctor.id}
+            doctorName={appt.doctor.user.name}
+            startTime={appt.startTime}
+            status={appt.status}
+            initialCheckedInAt={appt.checkedInAt}
+          />
+
+          {/* Completed Care Plan Accordion / Details */}
+          {isCompleted && <CompletedVisitCarePlan appt={appt} />}
         </CardContent>
       </Card>
     );
   };
 
   return (
-    <div className="container mx-auto max-w-5xl px-4 py-8 space-y-6">
+    <PageTransition className="container mx-auto max-w-5xl px-4 py-8 space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">My Appointments</h1>
           <p className="text-sm text-muted-foreground">
-            Manage your booked medical consultations and care history.
+            Manage your booked medical consultations and view post-visit care plans.
           </p>
         </div>
 
@@ -164,6 +332,12 @@ export default function PatientAppointmentsPage() {
           </Button>
         </div>
       </div>
+
+      {/* Google Calendar Sync Integration Card */}
+      <GoogleCalendarCard
+        title="Personal Google Calendar Sync"
+        description="Sync your upcoming doctor appointments to Google Calendar with automatic reminder notifications."
+      />
 
       {/* Tabs */}
       <Tabs defaultValue="upcoming" className="w-full">
@@ -240,6 +414,6 @@ export default function PatientAppointmentsPage() {
           )}
         </TabsContent>
       </Tabs>
-    </div>
+    </PageTransition>
   );
 }
