@@ -47,7 +47,7 @@ export default function AdminDoctorsPage() {
 
   React.useEffect(() => {
     fetchDoctors();
-  }, []);
+  }, [fetchDoctors]);
 
   const formatWorkingHoursSummary = (hours: WorkingHours) => {
     if (!hours) return "Standard Mon-Fri";

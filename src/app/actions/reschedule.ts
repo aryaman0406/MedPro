@@ -134,6 +134,13 @@ export async function rescheduleAppointmentWithTokenAction({
       return { success: false, error: "Original consultation record not found." };
     }
 
+    if (oldAppointment.status !== AppointmentStatus.NEEDS_RESCHEDULE) {
+      return {
+        success: false,
+        error: "This consultation has already been rescheduled or is no longer pending reschedule.",
+      };
+    }
+
     if (!doctor || !doctor.isActive) {
       return { success: false, error: "Doctor is currently not available for bookings." };
     }

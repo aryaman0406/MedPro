@@ -81,7 +81,26 @@ MedTrack Pro integrates Google Gemini to analyze patient symptoms, determine cli
 
 ---
 
-## 5. Upstash QStash (Medication Reminder Cron & Background Jobs)
+## 5. Upstash Redis (5-Minute Slot Hold Locking)
+
+### Overview
+MedTrack Pro implements a distributed 300-second (5-minute) soft-reservation lock using Upstash Redis (`SET NX EX 300`) to prevent appointment selection conflicts while patients fill out clinical intake forms.
+
+### Setup Instructions
+1. Go to [Upstash Console](https://console.upstash.com/redis).
+2. Create a free serverless Redis database (e.g. `medtrack-redis`).
+3. Under the **REST API** section, copy:
+   - `UPSTASH_REDIS_REST_URL`
+   - `UPSTASH_REDIS_REST_TOKEN`
+4. Add to `.env.local`:
+   ```env
+   UPSTASH_REDIS_REST_URL="https://your-database.upstash.io"
+   UPSTASH_REDIS_REST_TOKEN="your-token"
+   ```
+
+---
+
+## 6. Upstash QStash (Medication Reminder Cron & Background Jobs)
 
 ### Overview
 MedTrack Pro uses Upstash QStash to execute periodic background checks (every 15 minutes) for due patient medication reminders. The job detects un-sent reminders whose `scheduledFor` time has passed, creates `EmailLog` records of type `MEDICATION_REMINDER`, and transitions the reminder state to `SENT`.
