@@ -37,7 +37,7 @@ function createTransporter() {
 }
 
 /**
- * Low-level email dispatcher
+ * Low-level email dispatcher with graceful dev/console fallback
  */
 export async function sendEmail({
   to,
@@ -50,6 +50,18 @@ export async function sendEmail({
   html: string;
   text?: string;
 }): Promise<{ messageId?: string }> {
+  const user = process.env.BREVO_SMTP_USER;
+  const pass = process.env.BREVO_SMTP_KEY;
+
+  if (!user || !pass) {
+    console.log(`\n📨 [Simulated Email Dispatch] ───`);
+    console.log(`To: ${to}`);
+    console.log(`Subject: ${subject}`);
+    console.log(`Content Preview: ${text || subject}`);
+    console.log(`──────────────────────────────────\n`);
+    return { messageId: `mock-${Date.now()}` };
+  }
+
   const transporter = createTransporter();
   const from = process.env.EMAIL_FROM || '"MedTrack Pro" <no-reply@medtrack.pro>';
 

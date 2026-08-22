@@ -9,7 +9,7 @@ import {
 } from "@/lib/validations/ai";
 
 // Initialize Gemini Client
-const defaultModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+const defaultModel = process.env.GEMINI_MODEL || "gemini-3.6-flash";
 
 function getGeminiClient(): GoogleGenAI | null {
   const currentKey = process.env.GEMINI_API_KEY;
