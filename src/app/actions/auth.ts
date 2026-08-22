@@ -100,9 +100,10 @@ export async function registerUserAction(input: RegisterInput): Promise<ActionRe
     };
   } catch (error) {
     console.error("Error in registerUserAction:", error);
+    const msg = (error as Error)?.message || "An unexpected error occurred during registration.";
     return {
       success: false,
-      error: "An unexpected error occurred during registration. Please try again.",
+      error: `Registration error: ${msg}`,
     };
   }
 }
@@ -160,9 +161,10 @@ export async function loginUserAction(input: LoginInput): Promise<ActionResult<{
     }
 
     console.error("Error in loginUserAction:", error);
+    const msg = (error as Error)?.message || "An unexpected error occurred during login.";
     return {
       success: false,
-      error: "An unexpected error occurred during login. Please try again.",
+      error: `Login error: ${msg}`,
     };
   }
 }
