@@ -106,6 +106,30 @@ export async function getAdminDashboardStatsAction() {
   }
 }
 
+// 1a. Consolidated Admin Dashboard Action (Sequential execution to prevent DB connection spikes)
+export async function getAdminFullDashboardAction() {
+  try {
+    await ensureAdmin();
+
+    const statsRes = await getAdminDashboardStatsAction();
+    const analyticsRes = await getAdminAnalyticsAction();
+
+    return {
+      success: true,
+      data: {
+        stats: statsRes.data || null,
+        analytics: analyticsRes.data || null,
+      },
+    };
+  } catch (error) {
+    console.error("Error in getAdminFullDashboardAction:", error);
+    return {
+      success: false,
+      error: (error as Error).message || "Failed to load clinic dashboard.",
+    };
+  }
+}
+
 export interface DailyAppointmentStat {
   date: string;
   fullDate: string;

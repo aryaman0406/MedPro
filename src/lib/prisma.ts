@@ -16,11 +16,10 @@ const getFormattedDatabaseUrl = (): string | undefined => {
 
   let formatted = rawUrl.trim();
 
-  // If connection_limit is not explicitly set in the connection string,
-  // enforce a conservative pool size of 3 and 15s pool timeout to prevent PgBouncer EMAXCONNSESSION errors.
+  // Enforce a strict pool size of 2 connections and 5s pool timeout to prevent PgBouncer EMAXCONNSESSION errors and 1-minute hangs.
   if (!formatted.includes("connection_limit=")) {
     const separator = formatted.includes("?") ? "&" : "?";
-    formatted = `${formatted}${separator}connection_limit=3&pool_timeout=15`;
+    formatted = `${formatted}${separator}connection_limit=2&pool_timeout=5`;
   }
 
   return formatted;

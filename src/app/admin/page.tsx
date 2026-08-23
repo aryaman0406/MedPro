@@ -34,9 +34,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  getAdminDashboardStatsAction,
+  getAdminFullDashboardAction,
   getEmailDeliveryStatsAction,
-  getAdminAnalyticsAction,
   AdminAnalyticsData,
 } from "@/app/actions/admin";
 import { EmailDeliveryDashboard } from "@/components/admin/email-delivery-table";
@@ -90,24 +89,18 @@ export default function AdminDashboardPage() {
   } | null>(null);
 
   const [isLoading, setIsLoading] = React.useState(true);
+  const [isEmailLoading, setIsEmailLoading] = React.useState(false);
+  const [activeTab, setActiveTab] = React.useState("analytics");
 
   const fetchDashboardData = React.useCallback(async () => {
     setIsLoading(true);
     try {
-      const [dashRes, analyticsRes, emailRes] = await Promise.all([
-        getAdminDashboardStatsAction(),
-        getAdminAnalyticsAction(),
-        getEmailDeliveryStatsAction(),
-      ]);
-
-      if (dashRes.success && dashRes.data) {
-        setStats(dashRes.data as unknown as typeof stats);
-      }
-      if (analyticsRes.success && analyticsRes.data) {
-        setAnalytics(analyticsRes.data);
-      }
-      if (emailRes.success && emailRes.data) {
-        setEmailData(emailRes.data as unknown as typeof emailData);
+      const res = await getAdminFullDashboardAction();
+      if (res.success && res.data) {
+        if (res.data.stats) setStats(res.data.stats as unknown as typeof stats);
+        if (res.data.analytics) setAnalytics(res.data.analytics);
+      } else {
+        toast.error(res.error || "Failed to load clinic dashboard.");
       }
     } catch (err) {
       toast.error("An error occurred while loading analytics metrics.");
@@ -116,9 +109,30 @@ export default function AdminDashboardPage() {
     }
   }, []);
 
+  const fetchEmailData = React.useCallback(async () => {
+    if (emailData || isEmailLoading) return;
+    setIsEmailLoading(true);
+    try {
+      const res = await getEmailDeliveryStatsAction();
+      if (res.success && res.data) {
+        setEmailData(res.data as unknown as typeof emailData);
+      }
+    } catch (err) {
+      console.error("Failed to load email stats:", err);
+    } finally {
+      setIsEmailLoading(false);
+    }
+  }, [emailData, isEmailLoading]);
+
   React.useEffect(() => {
     fetchDashboardData();
   }, [fetchDashboardData]);
+
+  React.useEffect(() => {
+    if (activeTab === "emails") {
+      fetchEmailData();
+    }
+  }, [activeTab, fetchEmailData]);
 
   const summary = analytics?.summary;
 
@@ -229,7 +243,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Main Tabs: Practice Analytics & Operations vs Email Delivery */}
-      <Tabs defaultValue="analytics" className="w-full space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
         <TabsList className="grid w-full sm:w-[420px] grid-cols-2">
           <TabsTrigger value="analytics" className="text-xs flex items-center gap-1.5">
             <Activity className="h-3.5 w-3.5" />
