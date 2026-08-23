@@ -991,7 +991,20 @@ export async function adminReassignAppointmentAction(
         },
       });
 
-      // Queue BOOKING_CONFIRMATION EmailLog for Patient
+      // 1. Mark any pending LEAVE_NOTICE emails for this appointment as DEAD (superseded by admin reassignment)
+      await tx.emailLog.updateMany({
+        where: {
+          appointmentId: updatedAppt.id,
+          type: EmailType.LEAVE_NOTICE,
+          status: EmailStatus.PENDING,
+        },
+        data: {
+          status: EmailStatus.DEAD,
+          lastError: "Superseded: Appointment reassigned by Clinic Admin",
+        },
+      });
+
+      // 2. Queue BOOKING_CONFIRMATION EmailLog for Patient
       if (oldAppointment.patient.email) {
         await tx.emailLog.create({
           data: {
@@ -1004,7 +1017,7 @@ export async function adminReassignAppointmentAction(
         });
       }
 
-      // Queue BOOKING_CONFIRMATION EmailLog for new Doctor
+      // 3. Queue BOOKING_CONFIRMATION EmailLog for new Doctor
       if (targetDoctor.user.email) {
         await tx.emailLog.create({
           data: {
@@ -1019,6 +1032,9 @@ export async function adminReassignAppointmentAction(
 
       return updatedAppt;
     });
+
+    // Trigger non-blocking email processing to deliver new confirmation email immediately
+    void processEmailQueue(10);
 
     revalidatePath("/admin");
     revalidatePath("/admin/doctors");
