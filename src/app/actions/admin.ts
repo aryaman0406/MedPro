@@ -2,7 +2,7 @@
 
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
-import { prisma } from "@/lib/prisma";
+import { prisma, withDbRetry } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { AppointmentStatus, Role, EmailType, EmailStatus } from "@prisma/client";
 import { processEmailQueue } from "@/lib/email/mailer";
@@ -43,47 +43,49 @@ export async function getAdminDashboardStatsAction() {
     const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
 
     const [totalDoctors, totalPatients, appointmentsTodayCount, needsRescheduleAppointments] =
-      await Promise.all([
-        prisma.doctorProfile.count(),
-        prisma.user.count({ where: { role: Role.PATIENT } }),
-        prisma.appointment.count({
-          where: {
-            startTime: {
-              gte: startOfToday,
-              lte: endOfToday,
-            },
-          },
-        }),
-        prisma.appointment.findMany({
-          where: {
-            status: AppointmentStatus.NEEDS_RESCHEDULE,
-          },
-          include: {
-            patient: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                phone: true,
+      await withDbRetry(() =>
+        Promise.all([
+          prisma.doctorProfile.count(),
+          prisma.user.count({ where: { role: Role.PATIENT } }),
+          prisma.appointment.count({
+            where: {
+              startTime: {
+                gte: startOfToday,
+                lte: endOfToday,
               },
             },
-            doctor: {
-              include: {
-                user: {
-                  select: {
-                    id: true,
-                    name: true,
-                    email: true,
+          }),
+          prisma.appointment.findMany({
+            where: {
+              status: AppointmentStatus.NEEDS_RESCHEDULE,
+            },
+            include: {
+              patient: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  phone: true,
+                },
+              },
+              doctor: {
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      name: true,
+                      email: true,
+                    },
                   },
                 },
               },
             },
-          },
-          orderBy: {
-            startTime: "asc",
-          },
-        }),
-      ]);
+            orderBy: {
+              startTime: "asc",
+            },
+          }),
+        ])
+      );
 
     return {
       success: true,
@@ -390,29 +392,31 @@ export async function getDoctorsAction() {
     const now = new Date();
     const todayDateOnly = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
 
-    const doctors = await prisma.doctorProfile.findMany({
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
-            createdAt: true,
+    const doctors = await withDbRetry(() =>
+      prisma.doctorProfile.findMany({
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true,
+              createdAt: true,
+            },
+          },
+          leaves: {
+            orderBy: {
+              date: "desc",
+            },
           },
         },
-        leaves: {
-          orderBy: {
-            date: "desc",
+        orderBy: {
+          user: {
+            name: "asc",
           },
         },
-      },
-      orderBy: {
-        user: {
-          name: "asc",
-        },
-      },
-    });
+      })
+    );
 
     const formattedDoctors = doctors.map((doc) => {
       // Check if on leave today

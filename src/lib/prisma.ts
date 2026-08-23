@@ -4,15 +4,29 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-const getDatabaseUrl = () => {
-  const url =
+const getFormattedDatabaseUrl = (): string | undefined => {
+  const rawUrl =
     process.env.DATABASE_URL ||
     process.env.POSTGRES_URL ||
     process.env.POSTGRES_PRISMA_URL;
-  return url && url.trim().length > 0 ? url : undefined;
+
+  if (!rawUrl || rawUrl.trim().length === 0) {
+    return undefined;
+  }
+
+  let formatted = rawUrl.trim();
+
+  // If connection_limit is not explicitly set in the connection string,
+  // enforce a conservative pool size of 3 and 15s pool timeout to prevent PgBouncer EMAXCONNSESSION errors.
+  if (!formatted.includes("connection_limit=")) {
+    const separator = formatted.includes("?") ? "&" : "?";
+    formatted = `${formatted}${separator}connection_limit=3&pool_timeout=15`;
+  }
+
+  return formatted;
 };
 
-const dbUrl = getDatabaseUrl();
+const dbUrl = getFormattedDatabaseUrl();
 
 export const prisma =
   globalForPrisma.prisma ??
@@ -21,4 +35,44 @@ export const prisma =
     log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
   });
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+// Always store global singleton across execution contexts
+globalForPrisma.prisma = prisma;
+
+/**
+ * Resilient Database Execution Helper with Automatic Backoff Retry
+ * Catches transient PgBouncer pool exhaustion (EMAXCONNSESSION) or timeout errors
+ * and automatically retries up to `maxRetries` times before propagating.
+ */
+export async function withDbRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries = 2,
+  initialDelayMs = 150
+): Promise<T> {
+  let attempt = 0;
+  while (attempt <= maxRetries) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      attempt++;
+      const errorMessage = error?.message || String(error);
+      const isPoolOrConnError =
+        errorMessage.includes("EMAXCONNSESSION") ||
+        errorMessage.includes("max clients reached") ||
+        errorMessage.includes("pool_timeout") ||
+        errorMessage.includes("Connection pool") ||
+        errorMessage.includes("P1001") ||
+        errorMessage.includes("P1002") ||
+        errorMessage.includes("P1017");
+
+      if (isPoolOrConnError && attempt <= maxRetries) {
+        console.warn(
+          `[Prisma Pool Backoff] Attempt ${attempt}/${maxRetries} failed: ${errorMessage}. Retrying in ${initialDelayMs * attempt}ms...`
+        );
+        await new Promise((resolve) => setTimeout(resolve, initialDelayMs * attempt));
+      } else {
+        throw error;
+      }
+    }
+  }
+  return fn();
+}

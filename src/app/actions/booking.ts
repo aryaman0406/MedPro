@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { prisma } from "@/lib/prisma";
+import { prisma, withDbRetry } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { AppointmentStatus, Role, EmailType, EmailStatus } from "@prisma/client";
 import {
@@ -45,42 +45,44 @@ async function ensureAuthenticated() {
 // 1. Get Public Doctors for Directory
 export async function getPublicDoctorsAction(searchQuery?: string, specializationFilter?: string) {
   try {
-    const doctors = await prisma.doctorProfile.findMany({
-      where: {
-        isActive: true,
-        ...(specializationFilter && specializationFilter !== "ALL"
-          ? { specialization: specializationFilter }
-          : {}),
-        ...(searchQuery
-          ? {
-              OR: [
-                { user: { name: { contains: searchQuery, mode: "insensitive" } } },
-                { specialization: { contains: searchQuery, mode: "insensitive" } },
-              ],
-            }
-          : {}),
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
+    const doctors = await withDbRetry(() =>
+      prisma.doctorProfile.findMany({
+        where: {
+          isActive: true,
+          ...(specializationFilter && specializationFilter !== "ALL"
+            ? { specialization: specializationFilter }
+            : {}),
+          ...(searchQuery
+            ? {
+                OR: [
+                  { user: { name: { contains: searchQuery, mode: "insensitive" } } },
+                  { specialization: { contains: searchQuery, mode: "insensitive" } },
+                ],
+              }
+            : {}),
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true,
+            },
+          },
+          leaves: {
+            orderBy: { date: "asc" },
           },
         },
-        leaves: {
-          orderBy: { date: "asc" },
+        orderBy: {
+          user: { name: "asc" },
         },
-      },
-      orderBy: {
-        user: { name: "asc" },
-      },
-    });
+      })
+    );
 
     return {
       success: true,
-      data: doctors.map((doc) => ({
+      data: doctors.map((doc: any) => ({
         ...doc,
         workingHours: doc.workingHours as unknown as WorkingHours,
       })),
