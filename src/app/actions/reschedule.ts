@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { AppointmentStatus, EmailStatus, EmailType } from "@prisma/client";
 import { verifyRescheduleToken } from "@/lib/tokens";
 import { processAppointmentPreVisitSummary } from "@/lib/gemini";
+import { processEmailQueue } from "@/lib/email/mailer";
 import { WorkingHours, DaySchedule } from "@/lib/validations/admin";
 
 export type RescheduleActionResult<T = unknown> = {
@@ -211,8 +212,15 @@ export async function rescheduleAppointmentWithTokenAction({
       return newAppt;
     });
 
-    // Trigger Pre-Visit AI intake analysis
-    await processAppointmentPreVisitSummary(result.id, oldAppointment.symptomText);
+    // Trigger Pre-Visit AI intake analysis asynchronously in background
+    void processAppointmentPreVisitSummary(result.id, oldAppointment.symptomText).catch((aiErr) => {
+      console.error("Background reschedule AI summary error:", aiErr);
+    });
+
+    // Trigger non-blocking email queue processing for confirmation emails
+    void processEmailQueue(10).catch((emailErr) => {
+      console.error("Background reschedule email queue notice:", emailErr);
+    });
 
     revalidatePath("/patient/appointments");
     revalidatePath("/doctor/schedule");

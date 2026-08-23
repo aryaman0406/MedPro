@@ -64,8 +64,11 @@ export default function DoctorBookingPage() {
   const [isOnLeave, setIsOnLeave] = React.useState(false);
   const [leaveReason, setLeaveReason] = React.useState<string | undefined>();
 
-  // Active Hold State
+  // Active Hold State & Ref for stable callback comparison
   const [heldSlot, setHeldSlot] = React.useState<ComputedSlot | null>(null);
+  const heldSlotRef = React.useRef<ComputedSlot | null>(null);
+  heldSlotRef.current = heldSlot;
+
   const [holdTimerSeconds, setHoldTimerSeconds] = React.useState<number>(0);
   const [isHoldingSlot, setIsHoldingSlot] = React.useState(false);
 
@@ -118,7 +121,7 @@ export default function DoctorBookingPage() {
     try {
       const res = await getDoctorSlotsAction(doctorId, selectedDate);
       if (!res.success || !res.data) {
-        toast.error(res.error || "Failed to calculate slots.");
+        console.warn("Slot calculation notice:", res.error);
       } else {
         setSlots(res.data.slots);
         setIsOffDuty(res.data.isOffDuty);
@@ -130,17 +133,17 @@ export default function DoctorBookingPage() {
         if (activeHeld) {
           setHeldSlot(activeHeld);
           setHoldTimerSeconds(activeHeld.holdExpiresInSeconds || 300);
-        } else if (heldSlot && !res.data.slots.some((s) => s.isoStartTime === heldSlot.isoStartTime && s.status === "HELD_BY_YOU")) {
+        } else if (heldSlotRef.current && !res.data.slots.some((s) => s.isoStartTime === heldSlotRef.current?.isoStartTime && s.status === "HELD_BY_YOU")) {
           setHeldSlot(null);
           setHoldTimerSeconds(0);
         }
       }
     } catch (err) {
-      toast.error("An error occurred while calculating availability.");
+      console.error("Error calculating availability:", err);
     } finally {
       setIsLoadingSlots(false);
     }
-  }, [doctorId, selectedDate, heldSlot]);
+  }, [doctorId, selectedDate]);
 
   React.useEffect(() => {
     fetchSlots();
@@ -241,9 +244,10 @@ export default function DoctorBookingPage() {
     setBookingError(null);
 
     try {
+      const targetSlotIso = heldSlot.isoStartTime;
       const res = await confirmBookingAction({
         doctorId,
-        isoStartTime: heldSlot.isoStartTime,
+        isoStartTime: targetSlotIso,
         symptomText: symptomText.trim(),
         symptomImage: symptomImage || undefined,
       });
@@ -253,6 +257,8 @@ export default function DoctorBookingPage() {
         toast.error(res.error || "Booking failed.");
         fetchSlots();
       } else if (res.data?.appointmentId) {
+        setHeldSlot(null);
+        setHoldTimerSeconds(0);
         toast.success("Appointment successfully confirmed!");
         router.push(`/patient/book/confirmation/${res.data.appointmentId}`);
       }

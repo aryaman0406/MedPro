@@ -730,6 +730,12 @@ export async function addDoctorLeaveAction(
       };
     });
 
+    if (result.rescheduledCount > 0) {
+      void processEmailQueue(50).catch((emailErr) => {
+        console.error("Background leave notice email queue processing notice:", emailErr);
+      });
+    }
+
     revalidatePath("/admin/doctors");
     revalidatePath("/admin");
 

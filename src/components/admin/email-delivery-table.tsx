@@ -200,12 +200,12 @@ export function EmailDeliveryDashboard({ stats, deadEmails }: EmailDeliveryTable
                 {isProcessingQueue ? (
                   <>
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    Dispatching Queue...
+                    Retrying Failed Emails...
                   </>
                 ) : (
                   <>
-                    <Play className="h-3.5 w-3.5" />
-                    Process Queue Now
+                    <RotateCcw className="h-3.5 w-3.5" />
+                    Retry Failed Emails
                   </>
                 )}
               </Button>

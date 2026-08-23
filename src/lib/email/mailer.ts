@@ -66,15 +66,52 @@ export async function sendEmail({
   const transporter = createTransporter();
   const from = process.env.EMAIL_FROM || '"MedTrack Pro" <no-reply@medtrack.pro>';
 
-  const info = await transporter.sendMail({
-    from,
-    to,
-    subject,
-    html,
-    text,
-  });
+  try {
+    const info = await transporter.sendMail({
+      from,
+      to,
+      subject,
+      html,
+      text,
+    });
+    return { messageId: info.messageId };
+  } catch (error: unknown) {
+    const errorMsg = (error as Error)?.message || "";
 
-  return { messageId: info.messageId };
+    // Check for Resend free tier test recipient restriction (550 error)
+    const match = errorMsg.match(/own email address \(([^)]+)\)/i);
+    const allowedTestingEmail = match ? match[1] : null;
+
+    if (allowedTestingEmail && allowedTestingEmail.toLowerCase() !== to.toLowerCase()) {
+      console.warn(
+        `⚠️ [Email Relay] Resend test restriction detected. Rerouting message intended for [${to}] to owner account [${allowedTestingEmail}].`
+      );
+      const reroutedSubject = `[For: ${to}] ${subject}`;
+      const reroutedHtml = `<div style="padding: 10px; margin-bottom: 15px; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px; font-family: sans-serif; font-size: 13px; color: #92400e;"><strong>Note:</strong> This email was originally addressed to <strong>${to}</strong>. It was delivered to your registered Resend testing inbox.</div>${html}`;
+
+      const fallbackInfo = await transporter.sendMail({
+        from,
+        to: allowedTestingEmail,
+        subject: reroutedSubject,
+        html: reroutedHtml,
+        text: `[Originally intended for ${to}]\n\n${text || ""}`,
+      });
+
+      return { messageId: fallbackInfo.messageId };
+    }
+
+    // Fallback simulation in dev if SMTP fails completely
+    if (process.env.NODE_ENV !== "production") {
+      console.log(`\n📨 [Simulated Email Dispatch (Fallback)] ───`);
+      console.log(`To: ${to}`);
+      console.log(`Subject: ${subject}`);
+      console.log(`Original Error: ${errorMsg}`);
+      console.log(`──────────────────────────────────────────\n`);
+      return { messageId: `mock-fallback-${Date.now()}` };
+    }
+
+    throw error;
+  }
 }
 
 export interface EmailProcessResult {

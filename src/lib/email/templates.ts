@@ -1,4 +1,5 @@
 import { format } from "date-fns";
+import { getGoogleCalendarUrl } from "@/lib/google-calendar-helper";
 
 export interface BrandedEmailProps {
   previewText: string;
@@ -107,6 +108,15 @@ export function renderBookingConfirmationEmail(params: {
     ? `A new patient consultation has been scheduled in your clinic calendar. Please review the appointment overview and intake symptoms below.`
     : `Your medical consultation has been successfully booked and confirmed in the clinic schedule.`;
 
+  const googleCalUrl = getGoogleCalendarUrl({
+    title: `Medical Consultation - ${params.doctorName}`,
+    doctorName: params.doctorName,
+    patientName: params.patientName,
+    symptomText: params.symptomText,
+    startTime: params.startTime,
+    endTime: params.endTime,
+  });
+
   const html = renderBrandedLayout({
     previewText: `Consultation details for ${dateStr} at ${timeStr}`,
     headline: params.isDoctor ? "New Patient Consultation Booked" : "Consultation Confirmed!",
@@ -155,12 +165,13 @@ export function renderBookingConfirmationEmail(params: {
       </div>
 
       <div style="text-align: center; margin-top: 28px;">
-        <a href="${params.portalUrl}" class="btn">View Appointment in Portal</a>
+        <a href="${params.portalUrl}" class="btn" style="margin-right: 8px;">View Appointment in Portal</a>
+        <a href="${googleCalUrl}" target="_blank" style="display: inline-block; padding: 12px 22px; font-size: 14px; font-weight: 600; color: #4285F4; background-color: #ffffff; border: 1px solid #4285F4; border-radius: 8px; text-decoration: none; margin-top: 8px;">📅 Add to Google Calendar</a>
       </div>
     `,
   });
 
-  const text = `${subject}\n\n${recipientGreeting}\n\n${mainMessage}\n\nDoctor Name: ${params.doctorName} (${params.specialization})\nPatient Name: ${params.patientName}\nPatient Email: ${params.patientEmail}\nAppointment Date: ${dateStr}\nTime Window: ${timeStr}\nIntake Symptoms: "${params.symptomText}"\n\nView Portal: ${params.portalUrl}`;
+  const text = `${subject}\n\n${recipientGreeting}\n\n${mainMessage}\n\nDoctor Name: ${params.doctorName} (${params.specialization})\nPatient Name: ${params.patientName}\nPatient Email: ${params.patientEmail}\nAppointment Date: ${dateStr}\nTime Window: ${timeStr}\nIntake Symptoms: "${params.symptomText}"\n\nView Portal: ${params.portalUrl}\nAdd to Google Calendar: ${googleCalUrl}`;
 
   return { subject, html, text };
 }

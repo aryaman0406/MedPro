@@ -14,6 +14,7 @@ import {
 } from "@/lib/validations/ai";
 import { createMedicationRemindersForAppointment } from "@/lib/reminders";
 import { processAppointmentPostVisitSummary, processAppointmentPreVisitSummary } from "@/lib/gemini";
+import { processEmailQueue } from "@/lib/email/mailer";
 
 export type DoctorActionResult<T = unknown> = {
   success: boolean;
@@ -300,6 +301,11 @@ export async function completeAppointmentVisitAction(
     // Trigger non-blocking post-visit AI summary synthesis
     void processAppointmentPostVisitSummary(appointmentId);
 
+    // Trigger non-blocking email queue processing for medication reminders
+    void processEmailQueue(10).catch((emailErr) => {
+      console.error("Background medication reminder email queue notice:", emailErr);
+    });
+
     revalidatePath("/doctor/schedule");
     revalidatePath("/doctor");
     revalidatePath(`/doctor/appointments/${appointmentId}`);
@@ -495,6 +501,12 @@ export async function requestDoctorLeaveAction(
         rescheduledCount: affectedAppointments.length,
       };
     });
+
+    if (result.rescheduledCount > 0) {
+      void processEmailQueue(50).catch((emailErr) => {
+        console.error("Background leave notice email queue processing notice:", emailErr);
+      });
+    }
 
     revalidatePath("/doctor/leaves");
     revalidatePath("/doctor/leave");

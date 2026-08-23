@@ -24,6 +24,7 @@ import {
 } from "@/lib/redis";
 import { WorkingHours, DaySchedule } from "@/lib/validations/admin";
 import { processAppointmentPreVisitSummary } from "@/lib/gemini";
+import { processEmailQueue } from "@/lib/email/mailer";
 
 export type BookingActionResult<T = unknown> = {
   success: boolean;
@@ -157,12 +158,14 @@ export async function getDoctorSlotsAction(
     const currentUserId = session?.user?.id;
 
     // 1. Fetch doctor profile
-    const doctor = await prisma.doctorProfile.findUnique({
-      where: { id: doctorId },
-      include: {
-        leaves: true,
-      },
-    });
+    const doctor = await withDbRetry(() =>
+      prisma.doctorProfile.findUnique({
+        where: { id: doctorId },
+        include: {
+          leaves: true,
+        },
+      })
+    );
 
     if (!doctor || !doctor.isActive) {
       return {
@@ -224,23 +227,25 @@ export async function getDoctorSlotsAction(
     const dayEndDateTime = new Date(year, month - 1, day, endHour, endMin, 0, 0);
 
     // 5. Fetch existing appointments for the day
-    const existingAppointments = await prisma.appointment.findMany({
-      where: {
-        doctorId,
-        status: {
-          notIn: [AppointmentStatus.CANCELLED],
+    const existingAppointments = await withDbRetry(() =>
+      prisma.appointment.findMany({
+        where: {
+          doctorId,
+          status: {
+            notIn: [AppointmentStatus.CANCELLED],
+          },
+          startTime: {
+            gte: new Date(year, month - 1, day, 0, 0, 0, 0),
+            lte: new Date(year, month - 1, day, 23, 59, 59, 999),
+          },
         },
-        startTime: {
-          gte: new Date(year, month - 1, day, 0, 0, 0, 0),
-          lte: new Date(year, month - 1, day, 23, 59, 59, 999),
+        select: {
+          startTime: true,
+          endTime: true,
+          status: true,
         },
-      },
-      select: {
-        startTime: true,
-        endTime: true,
-        status: true,
-      },
-    });
+      })
+    );
 
     // 6. Fetch active Redis holds for doctor
     const activeHolds = await getAllDoctorHolds(doctorId);
@@ -529,11 +534,17 @@ export async function confirmBookingAction(
         });
 
         // 3a. Queue BOOKING_CONFIRMATION EmailLog for Patient
-        if (user.email) {
+        const patientRecord = await tx.user.findUnique({
+          where: { id: user.id },
+          select: { email: true },
+        });
+        const targetPatientEmail = patientRecord?.email || user.email;
+
+        if (targetPatientEmail) {
           await tx.emailLog.create({
             data: {
               appointmentId: newAppt.id,
-              toEmail: user.email,
+              toEmail: targetPatientEmail,
               type: EmailType.BOOKING_CONFIRMATION,
               status: EmailStatus.PENDING,
               attempts: 0,
@@ -560,8 +571,15 @@ export async function confirmBookingAction(
       // 4. Success: Clear Redis hold
       await deleteSlotHold(doctorId, isoStartTime);
 
-      // 5. Trigger Pre-Visit AI Intake summary generation
-      await processAppointmentPreVisitSummary(appointment.id, symptomText.trim());
+      // 5. Trigger Pre-Visit AI Intake summary generation asynchronously in background
+      void processAppointmentPreVisitSummary(appointment.id, symptomText.trim()).catch((aiErr) => {
+        console.error("Background AI summary generation notice:", aiErr);
+      });
+
+      // 6. Automatically dispatch queued confirmation emails immediately with zero manual admin action
+      void processEmailQueue(10).catch((emailErr) => {
+        console.error("Background email queue processing notice:", emailErr);
+      });
 
       revalidatePath("/patient/appointments");
       revalidatePath("/admin");
@@ -726,6 +744,11 @@ export async function cancelAppointmentAction(
           },
         });
       }
+    });
+
+    // 4. Automatically dispatch cancellation emails immediately with zero manual admin action
+    void processEmailQueue(10).catch((emailErr) => {
+      console.error("Background cancellation email queue processing notice:", emailErr);
     });
 
     revalidatePath("/patient/appointments");

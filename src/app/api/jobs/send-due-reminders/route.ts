@@ -28,11 +28,25 @@ async function verifyQStashRequest(req: NextRequest, rawBody: string): Promise<b
     }
 
     try {
-      const isValid = await qstashReceiver.verify({
+      let isValid = await qstashReceiver.verify({
         signature,
         body: rawBody,
         url: req.url,
       });
+
+      if (!isValid) {
+        const host = req.headers.get("x-forwarded-host") || req.headers.get("host");
+        const proto = req.headers.get("x-forwarded-proto") || "https";
+        if (host) {
+          const proxyUrl = `${proto}://${host}${req.nextUrl.pathname}`;
+          isValid = await qstashReceiver.verify({
+            signature,
+            body: rawBody,
+            url: proxyUrl,
+          });
+        }
+      }
+
       return isValid;
     } catch (err) {
       console.error("[QStash Job] Signature verification failed:", err);
