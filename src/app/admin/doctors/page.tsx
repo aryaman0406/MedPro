@@ -31,19 +31,20 @@ export default function AdminDoctorsPage() {
       if (!res.success || !res.data) {
         toast.error(res.error || "Failed to load doctors list.");
       } else {
-        setDoctors(res.data as DoctorWithProfile[]);
-        // If drawer is currently open for a doctor, refresh the selected doctor object
-        if (selectedDoctor) {
-          const updated = (res.data as DoctorWithProfile[]).find((d) => d.id === selectedDoctor.id);
-          if (updated) setSelectedDoctor(updated);
-        }
+        const doctorsList = res.data as DoctorWithProfile[];
+        setDoctors(doctorsList);
+        // If drawer is currently open for a doctor, refresh the selected doctor object safely
+        setSelectedDoctor((prev) => {
+          if (!prev) return null;
+          return doctorsList.find((d) => d.id === prev.id) || prev;
+        });
       }
     } catch (err) {
       toast.error("An error occurred while loading doctors.");
     } finally {
       setIsLoading(false);
     }
-  }, [selectedDoctor]);
+  }, []);
 
   React.useEffect(() => {
     fetchDoctors();
