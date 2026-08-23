@@ -73,5 +73,5 @@ export async function withDbRetry<T>(
       }
     }
   }
-  return fn();
+  throw new Error("Failed to execute database query after maximum retries.");
 }

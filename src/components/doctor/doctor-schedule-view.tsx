@@ -12,11 +12,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
-  FileText,
-  Filter,
   Loader2,
   Sparkles,
-  Stethoscope,
   User,
   UserX,
 } from "lucide-react";

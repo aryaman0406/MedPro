@@ -2,8 +2,7 @@
 
 import * as React from "react";
 import { motion } from "framer-motion";
-import { Timer, AlertTriangle } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Timer } from "lucide-react";
 
 interface HoldCountdownTimerProps {
   remainingSeconds: number;
@@ -16,9 +15,10 @@ export function HoldCountdownTimer({
   totalSeconds = 300,
   className,
 }: HoldCountdownTimerProps) {
+  const safeTotal = totalSeconds > 0 ? totalSeconds : 300;
   const radius = 16;
   const circumference = 2 * Math.PI * radius;
-  const progress = Math.max(0, Math.min(1, remainingSeconds / totalSeconds));
+  const progress = Math.max(0, Math.min(1, remainingSeconds / safeTotal));
   const strokeDashoffset = circumference * (1 - progress);
 
   const mins = Math.floor(remainingSeconds / 60);

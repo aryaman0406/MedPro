@@ -211,8 +211,8 @@ export async function rescheduleAppointmentWithTokenAction({
       return newAppt;
     });
 
-    // Trigger async Pre-Visit AI intake analysis in background
-    void processAppointmentPreVisitSummary(result.id, oldAppointment.symptomText);
+    // Trigger Pre-Visit AI intake analysis
+    await processAppointmentPreVisitSummary(result.id, oldAppointment.symptomText);
 
     revalidatePath("/patient/appointments");
     revalidatePath("/doctor/schedule");
