@@ -71,8 +71,24 @@ export default function DoctorBookingPage() {
 
   // Booking Form State
   const [symptomText, setSymptomText] = React.useState("");
+  const [symptomImage, setSymptomImage] = React.useState<string | null>(null);
   const [isConfirmingBooking, setIsConfirmingBooking] = React.useState(false);
   const [bookingError, setBookingError] = React.useState<string | null>(null);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 4 * 1024 * 1024) {
+      toast.error("Photo size must be less than 4MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setSymptomImage(reader.result as string);
+      toast.success("Symptom photo attached successfully.");
+    };
+    reader.readAsDataURL(file);
+  };
 
   // 1. Fetch Doctor Profile
   React.useEffect(() => {
@@ -229,6 +245,7 @@ export default function DoctorBookingPage() {
         doctorId,
         isoStartTime: heldSlot.isoStartTime,
         symptomText: symptomText.trim(),
+        symptomImage: symptomImage || undefined,
       });
 
       if (!res.success) {
@@ -508,6 +525,45 @@ export default function DoctorBookingPage() {
                 <p className="text-[11px] text-muted-foreground">
                   Our AI clinical assistant synthesizes these notes to brief your doctor prior to the visit.
                 </p>
+              </div>
+
+              {/* Optional Photo Attachment */}
+              <div className="space-y-1.5 pt-1">
+                <Label htmlFor="symptomPhoto" className="text-xs font-semibold flex items-center justify-between">
+                  <span>📸 Upload Symptom Photo / Lab Report <span className="font-normal text-muted-foreground">(Optional)</span></span>
+                  {symptomImage && (
+                    <button
+                      type="button"
+                      onClick={() => setSymptomImage(null)}
+                      className="text-[11px] text-rose-500 hover:underline"
+                    >
+                      Remove Photo
+                    </button>
+                  )}
+                </Label>
+                
+                {symptomImage ? (
+                  <div className="flex items-center gap-3 rounded-lg border p-2.5 bg-muted/20">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={symptomImage}
+                      alt="Symptom preview"
+                      className="h-16 w-16 object-cover rounded-md border"
+                    />
+                    <div className="text-xs">
+                      <p className="font-semibold text-emerald-600 dark:text-emerald-400">✓ Photo Attached</p>
+                      <p className="text-[11px] text-muted-foreground">The practitioner will review this attachment prior to your appointment.</p>
+                    </div>
+                  </div>
+                ) : (
+                  <Input
+                    id="symptomPhoto"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="text-xs file:text-xs file:font-semibold file:bg-primary/10 file:text-primary file:border-0 file:rounded-md file:px-2.5 file:py-1 cursor-pointer"
+                  />
+                )}
               </div>
             </CardContent>
 

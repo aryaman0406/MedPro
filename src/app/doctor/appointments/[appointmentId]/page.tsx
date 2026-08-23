@@ -30,6 +30,7 @@ import { PreVisitSummaryData, PostVisitSummaryData, PrescriptionItem } from "@/l
 import { CompleteVisitDialog } from "@/components/doctor/complete-visit-dialog";
 import { RetryPostVisitSummaryButton } from "@/components/doctor/retry-post-visit-summary-button";
 import { RetryPreVisitSummaryButton } from "@/components/doctor/retry-pre-visit-summary-button";
+import { PrintCarePlanButton } from "@/components/patient/print-care-plan-button";
 import { getGoogleCalendarUrl } from "@/lib/google-calendar-helper";
 
 export default async function DoctorAppointmentDetailPage({
@@ -78,7 +79,7 @@ export default async function DoctorAppointmentDetailPage({
           <Button
             variant="outline"
             size="sm"
-            className="h-8 text-xs font-semibold text-blue-600 dark:text-blue-400 border-blue-500/30 hover:bg-blue-500/10 gap-1.5"
+            className="h-8 text-xs font-semibold text-blue-600 dark:text-blue-400 border-blue-500/30 hover:bg-blue-500/10 gap-1.5 print:hidden"
             asChild
           >
             <a
@@ -96,6 +97,8 @@ export default async function DoctorAppointmentDetailPage({
               📅 Add to Google Calendar
             </a>
           </Button>
+
+          <PrintCarePlanButton />
 
           <UrgencyBadge
             urgency={preSummary?.urgency}
@@ -513,10 +516,26 @@ export default async function DoctorAppointmentDetailPage({
                 Submitted directly by the patient during booking intake
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               <div className="rounded-xl border bg-muted/30 p-4 text-xs sm:text-sm text-foreground leading-relaxed italic">
                 &quot;{appointment.symptomText}&quot;
               </div>
+
+              {appointment.symptomImage && (
+                <div className="space-y-2 pt-2 border-t">
+                  <span className="font-semibold text-xs text-foreground block">
+                    📸 Patient Symptom Photo / Attachment:
+                  </span>
+                  <div className="rounded-xl border overflow-hidden bg-black/5 dark:bg-white/5 p-2 inline-block">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={appointment.symptomImage}
+                      alt="Patient symptom attachment"
+                      className="max-h-64 object-contain rounded-lg"
+                    />
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

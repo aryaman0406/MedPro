@@ -523,6 +523,7 @@ export async function confirmBookingAction(
             endTime,
             status: AppointmentStatus.CONFIRMED,
             symptomText: symptomText.trim(),
+            symptomImage: validated.data.symptomImage || null,
             preVisitSummaryStatus: "PENDING",
           },
         });

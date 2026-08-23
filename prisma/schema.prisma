@@ -115,6 +115,7 @@ model Appointment {
   endTime               DateTime          @db.Timestamptz(6)
   status                AppointmentStatus @default(CONFIRMED)
   symptomText           String            @db.Text
+  symptomImage          String?           @db.Text
   checkedInAt           DateTime?         @db.Timestamptz(6)
   preVisitSummaryStatus String?           @default("PENDING")
   preVisitSummaryJson   Json?

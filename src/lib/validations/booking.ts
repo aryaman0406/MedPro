@@ -25,6 +25,7 @@ export const ConfirmBookingSchema = z.object({
   doctorId: z.string().min(1, "Doctor ID is required."),
   isoStartTime: z.string().datetime({ message: "Valid ISO 8601 datetime is required." }),
   symptomText: z.string().min(3, "Please provide brief description of your symptoms or reason for visit."),
+  symptomImage: z.string().optional(),
 });
 
 export type ConfirmBookingInput = z.infer<typeof ConfirmBookingSchema>;

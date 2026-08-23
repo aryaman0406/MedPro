@@ -33,6 +33,7 @@ import { getGoogleCalendarUrl } from "@/lib/google-calendar-helper";
 import { AppointmentStatus } from "@prisma/client";
 import { PostVisitSummaryData, PrescriptionItem } from "@/lib/validations/ai";
 import { PatientQueueCard } from "@/components/patient/patient-queue-card";
+import { PrintCarePlanButton } from "@/components/patient/print-care-plan-button";
 import { PageTransition } from "@/components/ui/page-transition";
 
 interface PatientAppointment {
@@ -268,13 +269,27 @@ export default function PatientAppointmentsPage() {
             </div>
           </div>
 
-          <div className="space-y-1 text-xs">
+          <div className="space-y-1.5 text-xs">
             <span className="text-muted-foreground font-semibold flex items-center gap-1.5">
               <FileText className="h-3.5 w-3.5 text-primary" /> Reason for Visit:
             </span>
             <p className="text-muted-foreground italic pl-5 line-clamp-2">
               &quot;{appt.symptomText}&quot;
             </p>
+
+            {(appt as any).symptomImage && (
+              <div className="pl-5 pt-1 flex items-center gap-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={(appt as any).symptomImage}
+                  alt="Symptom photo attachment"
+                  className="h-12 w-12 object-cover rounded-lg border shadow-2xs"
+                />
+                <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                  📸 Symptom Photo Attached
+                </span>
+              </div>
+            )}
           </div>
 
           {appt.status === "NEEDS_RESCHEDULE" && (
@@ -299,33 +314,36 @@ export default function PatientAppointmentsPage() {
           {/* Completed Care Plan Accordion / Details */}
           {isCompleted && <CompletedVisitCarePlan appt={appt} />}
 
-          {/* Google Calendar 1-Click Sync Button */}
+          {/* Google Calendar 1-Click Sync & Print Care Plan Buttons */}
           {appt.status !== "CANCELLED" && (
-            <div className="pt-2 flex items-center justify-between gap-2 border-t text-xs">
+            <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t text-xs print:hidden">
               <span className="text-muted-foreground text-[11px] flex items-center gap-1">
-                <Calendar className="h-3.5 w-3.5 text-blue-500" /> Google Calendar 2-Way Sync
+                <Calendar className="h-3.5 w-3.5 text-blue-500" /> Actions &amp; Calendar Sync
               </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 gap-1.5 px-2.5 rounded-lg"
-                asChild
-              >
-                <a
-                  href={getGoogleCalendarUrl({
-                    title: `Medical Consultation: ${appt.doctor.user.name}`,
-                    doctorName: appt.doctor.user.name,
-                    symptomText: appt.symptomText,
-                    startTime: appt.startTime,
-                    endTime: appt.endTime,
-                  })}
-                  target="_blank"
-                  rel="noopener noreferrer"
+              <div className="flex items-center gap-2">
+                {isCompleted && <PrintCarePlanButton />}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 gap-1.5 px-2.5 rounded-lg"
+                  asChild
                 >
-                  <Calendar className="h-3 w-3" />
-                  📅 Add to Google Calendar
-                </a>
-              </Button>
+                  <a
+                    href={getGoogleCalendarUrl({
+                      title: `Medical Consultation: ${appt.doctor.user.name}`,
+                      doctorName: appt.doctor.user.name,
+                      symptomText: appt.symptomText,
+                      startTime: appt.startTime,
+                      endTime: appt.endTime,
+                    })}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Calendar className="h-3 w-3" />
+                    📅 Add to Google Calendar
+                  </a>
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>
