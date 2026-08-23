@@ -235,7 +235,7 @@ export default function PatientAppointmentsPage() {
     const isCompleted = appt.status === "COMPLETED";
 
     return (
-      <Card key={appt.id} className="hover:border-primary/40 transition-all shadow-sm">
+      <Card key={appt.id} id={`appt-card-${appt.id}`} className="appointment-card hover:border-primary/40 transition-all shadow-sm">
         <CardHeader className="pb-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div className="flex items-center gap-2.5">
@@ -321,7 +321,7 @@ export default function PatientAppointmentsPage() {
                 <Calendar className="h-3.5 w-3.5 text-blue-500" /> Actions &amp; Calendar Sync
               </span>
               <div className="flex items-center gap-2">
-                {isCompleted && <PrintCarePlanButton />}
+                {isCompleted && <PrintCarePlanButton appointmentId={appt.id} />}
                 <Button
                   variant="ghost"
                   size="sm"
@@ -354,7 +354,7 @@ export default function PatientAppointmentsPage() {
   return (
     <PageTransition className="container mx-auto max-w-5xl px-4 py-8 space-y-6">
       {/* 1. Welcome Banner Card */}
-      <div className="rounded-3xl bg-gradient-to-r from-primary via-teal-700 to-emerald-700 p-6 md:p-8 text-white shadow-lg relative overflow-hidden">
+      <div className="hide-on-single-print rounded-3xl bg-gradient-to-r from-primary via-teal-700 to-emerald-700 p-6 md:p-8 text-white shadow-lg relative overflow-hidden">
         <div className="absolute right-4 top-1/2 -translate-y-1/2 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none" />
         <div className="relative z-10 space-y-2 max-w-2xl">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md text-xs font-semibold text-white">
@@ -373,7 +373,7 @@ export default function PatientAppointmentsPage() {
       </div>
 
       {/* 2. Quick Operations Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="hide-on-single-print grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card className="p-4 flex items-center gap-4 hover:border-primary/50 transition-all cursor-pointer shadow-xs bg-card" onClick={() => window.location.href = "/patient/find-doctor"}>
           <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0 font-bold">
             <CalendarPlus className="h-6 w-6" />
@@ -406,7 +406,7 @@ export default function PatientAppointmentsPage() {
       </div>
 
       {/* Header & Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
+      <div className="hide-on-single-print flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
         <div>
           <h2 className="text-xl font-bold tracking-tight">Your Consultations</h2>
           <p className="text-xs text-muted-foreground">

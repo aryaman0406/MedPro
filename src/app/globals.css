@@ -68,3 +68,44 @@
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
+
+/* Printable Medical Care Plan CSS */
+@media print {
+  nav,
+  footer,
+  header,
+  .print\:hidden,
+  .no-print,
+  button,
+  [role="tablist"],
+  .tabs-list {
+    display: none !important;
+  }
+
+  body {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* When printing a single appointment target */
+  body.printing-single-appointment .appointment-card:not(.target-print-appointment) {
+    display: none !important;
+  }
+
+  body.printing-single-appointment .hide-on-single-print {
+    display: none !important;
+  }
+
+  .target-print-appointment {
+    display: block !important;
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: none !important;
+    margin: 0 auto !important;
+    padding: 1.5rem !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    page-break-inside: avoid !important;
+  }
+}
