@@ -64,3 +64,12 @@ export const AddDoctorLeaveSchema = z.object({
 });
 
 export type AddDoctorLeaveInput = z.infer<typeof AddDoctorLeaveSchema>;
+
+export const AdminReassignAppointmentSchema = z.object({
+  appointmentId: z.string().min(1, "Appointment ID is required."),
+  targetDoctorId: z.string().min(1, "Target doctor ID is required."),
+  isoStartTime: z.string().min(1, "ISO start time is required."),
+});
+
+export type AdminReassignAppointmentInput = z.infer<typeof AdminReassignAppointmentSchema>;
+

@@ -8,6 +8,7 @@ import {
   ArrowRight,
   BarChart3,
   Calendar,
+  CalendarOff,
   CheckCircle2,
   Clock,
   Inbox,
@@ -43,6 +44,22 @@ import { DailyAppointmentsChart } from "@/components/admin/analytics/daily-appoi
 import { DoctorUtilizationCard } from "@/components/admin/analytics/doctor-utilization-card";
 import { NoShowTrendChart } from "@/components/admin/analytics/no-show-trend-chart";
 import { PageTransition } from "@/components/ui/page-transition";
+import { ReassignAppointmentDialog } from "@/components/admin/reassign-appointment-dialog";
+
+interface DoctorLeaveItem {
+  id: string;
+  doctorId: string;
+  date: Date | string;
+  reason?: string | null;
+  createdAt: Date | string;
+  doctor: {
+    user: {
+      id: string;
+      name: string;
+      email: string;
+    };
+  };
+}
 
 interface RescheduleAppointment {
   id: string;
@@ -57,6 +74,7 @@ interface RescheduleAppointment {
     phone?: string | null;
   };
   doctor: {
+    id?: string;
     specialization: string;
     user: {
       id: string;
@@ -73,6 +91,7 @@ export default function AdminDashboardPage() {
     appointmentsTodayCount: number;
     needsRescheduleCount: number;
     needsRescheduleAppointments: RescheduleAppointment[];
+    doctorLeaves?: DoctorLeaveItem[];
   } | null>(null);
 
   const [analytics, setAnalytics] = React.useState<AdminAnalyticsData | null>(null);
@@ -91,6 +110,15 @@ export default function AdminDashboardPage() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [isEmailLoading, setIsEmailLoading] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState("analytics");
+
+  // Reassignment Modal State
+  const [reassignAppointment, setReassignAppointment] = React.useState<RescheduleAppointment | null>(null);
+  const [reassignDialogOpen, setReassignDialogOpen] = React.useState(false);
+
+  const handleOpenReassignModal = (appt: RescheduleAppointment) => {
+    setReassignAppointment(appt);
+    setReassignDialogOpen(true);
+  };
 
   const fetchDashboardData = React.useCallback(async () => {
     setIsLoading(true);
@@ -287,6 +315,79 @@ export default function AdminDashboardPage() {
             />
           </div>
 
+          {/* Doctor Leaves & Blackout Roster Card */}
+          <Card>
+            <CardHeader className="pb-3 border-b">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <CalendarOff className="h-4 w-4 text-primary" />
+                    Doctor Leaves &amp; Blackout Roster
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Registered doctor absences and leave dates. Patient appointments overlapping these dates are flagged below for administrative reassignment.
+                  </CardDescription>
+                </div>
+                {stats?.doctorLeaves && stats.doctorLeaves.length > 0 && (
+                  <Badge variant="outline" className="font-mono text-xs">
+                    {stats.doctorLeaves.length} Leave Entry(s)
+                  </Badge>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[200px]">Doctor</TableHead>
+                    <TableHead className="w-[160px]">Leave Date</TableHead>
+                    <TableHead>Reason for Absence</TableHead>
+                    <TableHead className="w-[160px]">Registered On</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? (
+                    Array.from({ length: 2 }).map((_, i) => (
+                      <TableRow key={i}>
+                        <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-40" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                      </TableRow>
+                    ))
+                  ) : !stats?.doctorLeaves || stats.doctorLeaves.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="h-20 text-center text-muted-foreground text-xs">
+                        No doctor leaves currently registered.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    stats.doctorLeaves.map((leave) => {
+                      const leaveDateObj = new Date(leave.date);
+                      const createdDateObj = new Date(leave.createdAt);
+                      return (
+                        <TableRow key={leave.id} className="hover:bg-muted/30 transition-colors">
+                          <TableCell className="font-semibold text-xs text-foreground">
+                            {leave.doctor.user.name}
+                          </TableCell>
+                          <TableCell className="font-mono text-xs font-semibold text-foreground">
+                            {format(leaveDateObj, "EEE, MMM dd, yyyy")}
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {leave.reason || "Scheduled Clinical Leave"}
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground font-mono">
+                            {format(createdDateObj, "MMM dd, yyyy")}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
           {/* Integrated Needs Reschedule Triage Table */}
           <Card className={stats && stats.needsRescheduleCount > 0 ? "border-amber-500/40" : ""}>
             <CardHeader className="pb-3 border-b">
@@ -316,6 +417,7 @@ export default function AdminDashboardPage() {
                     <TableHead className="w-[180px]">Original Slot Time</TableHead>
                     <TableHead>Symptoms / Notes</TableHead>
                     <TableHead className="w-[130px]">Status</TableHead>
+                    <TableHead className="w-[130px] text-right">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -327,11 +429,12 @@ export default function AdminDashboardPage() {
                         <TableCell><Skeleton className="h-4 w-28" /></TableCell>
                         <TableCell><Skeleton className="h-4 w-40" /></TableCell>
                         <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                        <TableCell className="text-right"><Skeleton className="h-4 w-16 ml-auto" /></TableCell>
                       </TableRow>
                     ))
                   ) : !stats || stats.needsRescheduleAppointments.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="h-28 text-center text-muted-foreground text-xs">
+                      <TableCell colSpan={6} className="h-28 text-center text-muted-foreground text-xs">
                         <div className="flex flex-col items-center justify-center gap-1.5">
                           <CheckCircle2 className="h-5 w-5 text-emerald-500" />
                           <span className="font-medium text-foreground">No appointments currently need rescheduling</span>
@@ -373,6 +476,17 @@ export default function AdminDashboardPage() {
                               NEEDS_RESCHEDULE
                             </Badge>
                           </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="default"
+                              size="sm"
+                              className="h-7 text-xs font-semibold flex items-center gap-1.5 ml-auto"
+                              onClick={() => handleOpenReassignModal(appt)}
+                            >
+                              <UserCheck className="h-3.5 w-3.5" />
+                              Reassign
+                            </Button>
+                          </TableCell>
                         </TableRow>
                       );
                     })
@@ -398,6 +512,14 @@ export default function AdminDashboardPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Reassign / Reschedule Modal */}
+      <ReassignAppointmentDialog
+        appointment={reassignAppointment}
+        open={reassignDialogOpen}
+        onOpenChange={setReassignDialogOpen}
+        onSuccess={fetchDashboardData}
+      />
     </PageTransition>
   );
 }

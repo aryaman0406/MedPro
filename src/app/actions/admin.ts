@@ -13,6 +13,8 @@ import {
   type UpdateDoctorInput,
   AddDoctorLeaveSchema,
   type AddDoctorLeaveInput,
+  AdminReassignAppointmentSchema,
+  type AdminReassignAppointmentInput,
   WorkingHours,
 } from "@/lib/validations/admin";
 
@@ -42,7 +44,7 @@ export async function getAdminDashboardStatsAction() {
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
     const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
 
-    const [totalDoctors, totalPatients, appointmentsTodayCount, needsRescheduleAppointments] =
+    const [totalDoctors, totalPatients, appointmentsTodayCount, needsRescheduleAppointments, doctorLeaves] =
       await withDbRetry(() =>
         Promise.all([
           prisma.doctorProfile.count(),
@@ -84,6 +86,25 @@ export async function getAdminDashboardStatsAction() {
               startTime: "asc",
             },
           }),
+          prisma.doctorLeave.findMany({
+            include: {
+              doctor: {
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      name: true,
+                      email: true,
+                    },
+                  },
+                },
+              },
+            },
+            orderBy: {
+              date: "desc",
+            },
+            take: 30,
+          }),
         ])
       );
 
@@ -95,6 +116,7 @@ export async function getAdminDashboardStatsAction() {
         appointmentsTodayCount,
         needsRescheduleCount: needsRescheduleAppointments.length,
         needsRescheduleAppointments,
+        doctorLeaves,
       },
     };
   } catch (error) {
@@ -860,3 +882,168 @@ export async function triggerProcessEmailQueueAction(): Promise<AdminActionResul
     };
   }
 }
+
+// 10. Admin Reassign / Reschedule Patient Appointment
+export async function adminReassignAppointmentAction(
+  input: AdminReassignAppointmentInput
+): Promise<AdminActionResult<{ appointmentId: string; newDoctorId: string }>> {
+  try {
+    await ensureAdmin();
+
+    const validated = AdminReassignAppointmentSchema.safeParse(input);
+    if (!validated.success) {
+      return {
+        success: false,
+        error: "Invalid reassignment parameters.",
+        fieldErrors: validated.error.flatten().fieldErrors,
+      };
+    }
+
+    const { appointmentId, targetDoctorId, isoStartTime } = validated.data;
+    const newStartTime = new Date(isoStartTime);
+
+    // Fetch appointment with patient and original doctor
+    const oldAppointment = await prisma.appointment.findUnique({
+      where: { id: appointmentId },
+      include: {
+        patient: { select: { id: true, name: true, email: true } },
+        doctor: { include: { user: { select: { id: true, name: true, email: true } } } },
+      },
+    });
+
+    if (!oldAppointment) {
+      return { success: false, error: "Appointment record not found." };
+    }
+
+    // Fetch target doctor
+    const targetDoctor = await prisma.doctorProfile.findUnique({
+      where: { id: targetDoctorId },
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+        leaves: true,
+      },
+    });
+
+    if (!targetDoctor || !targetDoctor.isActive) {
+      return { success: false, error: "Target doctor is currently inactive or not found." };
+    }
+
+    // If reassigning to the SAME doctor: validate that the date is 1 day before or 1 day after original appointment date
+    if (targetDoctorId === oldAppointment.doctorId) {
+      const origDate = new Date(oldAppointment.startTime);
+      const origDayStart = new Date(origDate.getFullYear(), origDate.getMonth(), origDate.getDate()).getTime();
+      const newDayStart = new Date(newStartTime.getFullYear(), newStartTime.getMonth(), newStartTime.getDate()).getTime();
+      const diffMs = Math.abs(newDayStart - origDayStart);
+      const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+      if (diffDays !== 1) {
+        return {
+          success: false,
+          error: "When rescheduling with the same doctor, the new appointment date must be exactly 1 day earlier or 1 day after.",
+        };
+      }
+    }
+
+    // Check if target doctor is on leave on newStartTime date
+    const targetDateUtc = new Date(Date.UTC(newStartTime.getFullYear(), newStartTime.getMonth(), newStartTime.getDate()));
+    const isOnLeave = targetDoctor.leaves.some((l) => {
+      const lDate = new Date(l.date);
+      return (
+        lDate.getUTCFullYear() === targetDateUtc.getUTCFullYear() &&
+        lDate.getUTCMonth() === targetDateUtc.getUTCMonth() &&
+        lDate.getUTCDate() === targetDateUtc.getUTCDate()
+      );
+    });
+
+    if (isOnLeave) {
+      return {
+        success: false,
+        error: `Dr. ${targetDoctor.user.name} is on leave on the selected date.`,
+      };
+    }
+
+    const slotDuration = targetDoctor.slotDurationMinutes || 30;
+    const newEndTime = new Date(newStartTime.getTime() + slotDuration * 60 * 1000);
+
+    const result = await prisma.$transaction(async (tx) => {
+      // Pre-check for slot collisions for targetDoctor
+      const overlap = await tx.appointment.findFirst({
+        where: {
+          doctorId: targetDoctorId,
+          status: { notIn: [AppointmentStatus.CANCELLED] },
+          startTime: { lt: newEndTime },
+          endTime: { gt: newStartTime },
+          NOT: { id: appointmentId },
+        },
+      });
+
+      if (overlap) {
+        throw new Error("CONFLICT_SLOT_TAKEN");
+      }
+
+      const updatedAppt = await tx.appointment.update({
+        where: { id: appointmentId },
+        data: {
+          doctorId: targetDoctorId,
+          startTime: newStartTime,
+          endTime: newEndTime,
+          status: AppointmentStatus.CONFIRMED,
+        },
+      });
+
+      // Queue BOOKING_CONFIRMATION EmailLog for Patient
+      if (oldAppointment.patient.email) {
+        await tx.emailLog.create({
+          data: {
+            appointmentId: updatedAppt.id,
+            toEmail: oldAppointment.patient.email,
+            type: EmailType.BOOKING_CONFIRMATION,
+            status: EmailStatus.PENDING,
+            attempts: 0,
+          },
+        });
+      }
+
+      // Queue BOOKING_CONFIRMATION EmailLog for new Doctor
+      if (targetDoctor.user.email) {
+        await tx.emailLog.create({
+          data: {
+            appointmentId: updatedAppt.id,
+            toEmail: targetDoctor.user.email,
+            type: EmailType.BOOKING_CONFIRMATION,
+            status: EmailStatus.PENDING,
+            attempts: 0,
+          },
+        });
+      }
+
+      return updatedAppt;
+    });
+
+    revalidatePath("/admin");
+    revalidatePath("/admin/doctors");
+    revalidatePath("/doctor");
+    revalidatePath("/doctor/schedule");
+    revalidatePath("/patient/appointments");
+
+    return {
+      success: true,
+      message: `Appointment for ${oldAppointment.patient.name} successfully reassigned to Dr. ${targetDoctor.user.name}.`,
+      data: { appointmentId: result.id, newDoctorId: targetDoctorId },
+    };
+  } catch (error) {
+    const errorMsg = (error as Error)?.message || "";
+    if (errorMsg.includes("CONFLICT_SLOT_TAKEN")) {
+      return {
+        success: false,
+        error: "This time slot is already booked for the selected doctor. Please select another slot.",
+      };
+    }
+    console.error("Error in adminReassignAppointmentAction:", error);
+    return {
+      success: false,
+      error: errorMsg || "Failed to reassign appointment.",
+    };
+  }
+}
+
