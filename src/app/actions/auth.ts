@@ -100,7 +100,10 @@ export async function registerUserAction(input: RegisterInput): Promise<ActionRe
     };
   } catch (error) {
     console.error("Error in registerUserAction:", error);
-    const msg = (error as Error)?.message || "An unexpected error occurred during registration.";
+    let msg = (error as Error)?.message || "An unexpected error occurred during registration.";
+    if (msg.includes("Error validating datasource db") || msg.includes("the URL must start with the protocol")) {
+      msg = "Database connection string (DATABASE_URL) is missing or invalid in Vercel environment variables. Please check your Vercel Project Settings > Environment Variables and ensure DATABASE_URL is set.";
+    }
     return {
       success: false,
       error: `Registration error: ${msg}`,
