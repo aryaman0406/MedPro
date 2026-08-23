@@ -397,7 +397,7 @@ export default function HomePage() {
                 <p>Password: <span className="text-foreground font-semibold">AdminPass123!</span></p>
               </div>
               <Button size="sm" variant="ghost" asChild className="w-full text-[11px] h-8 text-primary hover:bg-primary/10 font-semibold">
-                <Link href="/login">Log in as Admin →</Link>
+                <Link href="/login?role=ADMIN">Log in as Admin →</Link>
               </Button>
             </div>
 
@@ -412,7 +412,7 @@ export default function HomePage() {
                 <p>Password: <span className="text-foreground font-semibold">DoctorPass123!</span></p>
               </div>
               <Button size="sm" variant="ghost" asChild className="w-full text-[11px] h-8 text-primary hover:bg-primary/10 font-semibold">
-                <Link href="/login">Log in as Doctor →</Link>
+                <Link href="/login?role=DOCTOR">Log in as Doctor →</Link>
               </Button>
             </div>
 
@@ -427,7 +427,7 @@ export default function HomePage() {
                 <p>Password: <span className="text-foreground font-semibold">PatientPass123!</span></p>
               </div>
               <Button size="sm" variant="ghost" asChild className="w-full text-[11px] h-8 text-primary hover:bg-primary/10 font-semibold">
-                <Link href="/login">Log in as Patient →</Link>
+                <Link href="/login?role=PATIENT">Log in as Patient →</Link>
               </Button>
             </div>
           </div>

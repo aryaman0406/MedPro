@@ -25,8 +25,17 @@ export default function LoginPage() {
   const [isGoogleLoading, setIsGoogleLoading] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
-  // Read URL query errors (e.g. from middleware)
+  // Read URL query parameters (role and error state)
   React.useEffect(() => {
+    const roleParam = searchParams.get("role");
+    if (roleParam === "ADMIN") {
+      setSelectedRole("ADMIN");
+    } else if (roleParam === "DOCTOR") {
+      setSelectedRole("DOCTOR");
+    } else if (roleParam === "PATIENT") {
+      setSelectedRole("PATIENT");
+    }
+
     const error = searchParams.get("error");
     const requiredRole = searchParams.get("requiredRole");
 
