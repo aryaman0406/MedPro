@@ -1,4 +1,5 @@
 import type { NextAuthConfig } from "next-auth";
+import Google from "next-auth/providers/google";
 
 export type UserRole = "PATIENT" | "DOCTOR" | "ADMIN";
 
@@ -26,5 +27,17 @@ export const authConfig = {
       return session;
     },
   },
-  providers: [], // Configured with credentials in auth.ts (Node.js runtime)
+  providers: [
+    Google({
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      authorization: {
+        params: {
+          prompt: "select_account",
+          access_type: "offline",
+          response_type: "code",
+        },
+      },
+    }),
+  ],
 } satisfies NextAuthConfig;

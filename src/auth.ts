@@ -3,12 +3,13 @@ import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { LoginSchema } from "@/lib/validations/auth";
-import { authConfig } from "@/auth.config";
+import { authConfig, UserRole } from "@/auth.config";
 import { Role } from "@prisma/client";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   providers: [
+    ...authConfig.providers,
     Credentials({
       name: "credentials",
       credentials: {
@@ -122,5 +123,79 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
+  callbacks: {
+    async signIn({ user, account, profile }) {
+      if (account?.provider === "google") {
+        if (!profile?.email || profile.email_verified === false) {
+          console.error("Google OAuth rejected: Email missing or not verified by Google.");
+          return false;
+        }
+
+        const normalizedEmail = profile.email.toLowerCase().trim();
+
+        try {
+          // Look up user by email in database
+          let existingUser = await prisma.user.findUnique({
+            where: { email: normalizedEmail },
+          });
+
+          if (existingUser) {
+            // Existing user: Link to existing account and preserve role (PATIENT, DOCTOR, ADMIN)
+            user.id = existingUser.id;
+            user.role = existingUser.role;
+            return true;
+          }
+
+          // New user: Auto-create as PATIENT only
+          const newUser = await prisma.user.create({
+            data: {
+              name: user.name || (profile.name as string) || "Patient User",
+              email: normalizedEmail,
+              passwordHash: "oauth_google_account",
+              role: Role.PATIENT,
+            },
+          });
+
+          user.id = newUser.id;
+          user.role = newUser.role;
+          return true;
+        } catch (error) {
+          console.error("Error in Google signIn callback:", error);
+          return false;
+        }
+      }
+      return true;
+    },
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+        token.role = user.role as UserRole;
+      }
+
+      // If token is missing role (e.g. initial Google OAuth callback)
+      if ((!token.role || !token.id) && token.email) {
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { email: token.email.toLowerCase().trim() },
+          });
+          if (dbUser) {
+            token.id = dbUser.id;
+            token.role = dbUser.role as UserRole;
+          }
+        } catch (err) {
+          console.error("Error populating token role from DB:", err);
+        }
+      }
+
+      return token;
+    },
+    async session({ session, token }) {
+      if (token && session.user) {
+        session.user.id = (token.id as string) || (token.sub as string);
+        session.user.role = token.role as UserRole;
+      }
+      return session;
+    },
+  },
   trustHost: true,
 });
