@@ -24,8 +24,41 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageTransition } from "@/components/ui/page-transition";
+import { getPublicDoctorsAction } from "@/app/actions/booking";
 
 export default function HomePage() {
+  const [featuredDoctor, setFeaturedDoctor] = React.useState<{
+    name: string;
+    specialization: string;
+    isActive: boolean;
+    slotDurationMinutes?: number;
+  }>({
+    name: "Dr. Sarah Jenkins",
+    specialization: "Cardiology Specialist",
+    isActive: true,
+    slotDurationMinutes: 30,
+  });
+
+  React.useEffect(() => {
+    async function loadFeaturedDoctor() {
+      try {
+        const res = await getPublicDoctorsAction();
+        if (res.success && res.data && res.data.length > 0) {
+          const doc = res.data[0];
+          setFeaturedDoctor({
+            name: doc.user.name.startsWith("Dr.") ? doc.user.name : `Dr. ${doc.user.name}`,
+            specialization: `${doc.specialization} Specialist`,
+            isActive: doc.isActive,
+            slotDurationMinutes: doc.slotDurationMinutes,
+          });
+        }
+      } catch (err) {
+        console.error("Failed to load featured doctor:", err);
+      }
+    }
+    loadFeaturedDoctor();
+  }, []);
+
   return (
     <PageTransition className="flex flex-col gap-16 pb-20">
       {/* 1. Hero Section */}
@@ -97,18 +130,24 @@ export default function HomePage() {
             <div className="lg:col-span-5 relative">
               <div className="relative mx-auto max-w-md lg:max-w-none rounded-3xl bg-gradient-to-tr from-primary/20 via-teal-500/10 to-emerald-500/20 p-6 shadow-xl border border-primary/20">
                 <div className="space-y-4">
-                  {/* Doctor Graphic Card */}
+                  {/* Doctor Graphic Card (Dynamically fetched active doctor) */}
                   <div className="rounded-2xl bg-card border p-4 shadow-md flex items-center gap-4">
-                    <div className="h-14 w-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-bold text-lg border border-primary/20">
+                    <div className="h-14 w-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-bold text-lg border border-primary/20 shrink-0">
                       DR
                     </div>
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <h4 className="font-bold text-sm text-foreground">Dr. Sarah Jenkins</h4>
-                        <Badge variant="success" className="text-[10px]">Active Today</Badge>
+                        <h4 className="font-bold text-sm text-foreground">{featuredDoctor.name}</h4>
+                        {featuredDoctor.isActive && (
+                          <Badge variant="success" className="text-[10px]">Active Today</Badge>
+                        )}
                       </div>
-                      <p className="text-xs text-primary font-medium">Cardiology Specialist</p>
-                      <p className="text-[11px] text-muted-foreground">Next Available: 09:30 AM</p>
+                      <p className="text-xs text-primary font-medium">{featuredDoctor.specialization}</p>
+                      <p className="text-[11px] text-muted-foreground font-mono">
+                        {featuredDoctor.slotDurationMinutes
+                          ? `${featuredDoctor.slotDurationMinutes}-min consultations available`
+                          : "Accepting consultations"}
+                      </p>
                     </div>
                   </div>
 
