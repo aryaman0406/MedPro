@@ -69,6 +69,15 @@ The platform unifies patient booking, concurrent double-booking exclusion, pre-v
     - Upstash QStash 15-minute background cron worker scanning pending reminders and sending adherence emails via Brevo/Nodemailer HTML templates.
     - Automated retry worker for failed emails with an interactive Dead Letter Queue dashboard on `/admin`.
 
+11. **Doctor Leave Management & Admin Patient Reassignment**:
+    - When doctors apply for leave, any overlapping patient appointments (including 1-month advance bookings) automatically transition to `NEEDS_RESCHEDULE`.
+    - Admin Portal features a dedicated **Doctor Leaves & Blackout Roster** and an interactive **Patient Reassignment & Reschedule Dialog**.
+    - Admins can reassign patients to another active doctor or reschedule with the same doctor (restricted to **1 day earlier or 1 day after** per clinic policy).
+
+12. **Dedicated Reschedule Notification Emails**:
+    - When an admin reassigns a patient's appointment, any pending "Reschedule Required" leave notice emails are automatically superseded.
+    - A dedicated **Reschedule Notice Email** (`EmailType.RESCHEDULE_NOTICE`) with an updated consultation summary card is immediately delivered to both the patient and the assigned doctor.
+
 ---
 
 ## 📊 Database Schema & Entity Relationship Overview
@@ -140,7 +149,7 @@ erDiagram
     EmailLog {
         string id PK
         string recipient
-        string type "BOOKING_CONFIRMATION | REMINDER | CANCELLATION | LEAVE_NOTICE | MEDICATION_REMINDER"
+        string type "BOOKING_CONFIRMATION | REMINDER | CANCELLATION | LEAVE_NOTICE | MEDICATION_REMINDER | RESCHEDULE_NOTICE"
         string subject
         string bodyHtml
         string status "PENDING | SENT | FAILED | DEAD"
