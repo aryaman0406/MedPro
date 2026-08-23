@@ -38,10 +38,10 @@ export function Footer() {
           <div>
             <h4 className="font-semibold text-foreground mb-3 text-xs uppercase tracking-wider">Providers &amp; Clinics</h4>
             <ul className="space-y-2 text-xs">
-              <li><Link href="/doctor/schedule" className="hover:text-foreground transition-colors">Doctor Schedule Manager</Link></li>
-              <li><Link href="/doctor/leaves" className="hover:text-foreground transition-colors">Leave &amp; Availability</Link></li>
-              <li><Link href="/register" className="hover:text-foreground transition-colors">Provider Registration</Link></li>
-              <li><Link href="/admin" className="hover:text-foreground transition-colors">Admin Analytics</Link></li>
+              <li><Link href="/login?role=DOCTOR" className="hover:text-foreground transition-colors">Doctor Portal Sign In</Link></li>
+              <li><Link href="/login?role=DOCTOR" className="hover:text-foreground transition-colors">Doctor Schedule &amp; Leaves</Link></li>
+              <li><Link href="/login?role=ADMIN" className="hover:text-foreground transition-colors">Clinic Administrator Access</Link></li>
+              <li><Link href="/login?role=ADMIN" className="hover:text-foreground transition-colors">Practice Analytics &amp; Operations</Link></li>
             </ul>
           </div>
 
@@ -49,9 +49,21 @@ export function Footer() {
           <div>
             <h4 className="font-semibold text-foreground mb-3 text-xs uppercase tracking-wider">Trust &amp; Security</h4>
             <ul className="space-y-2 text-xs">
-              <li className="flex items-center gap-1.5"><Shield className="h-3.5 w-3.5 text-primary" /> HIPAA-Compliant Architecture</li>
-              <li className="flex items-center gap-1.5"><Sparkles className="h-3.5 w-3.5 text-primary" /> AI Clinical Assistance</li>
-              <li className="flex items-center gap-1.5"><Heart className="h-3.5 w-3.5 text-primary" /> Patient-Centric Design</li>
+              <li>
+                <Link href="/security" className="flex items-center gap-1.5 hover:text-foreground transition-colors">
+                  <Shield className="h-3.5 w-3.5 text-primary shrink-0" /> HIPAA-Compliant Architecture
+                </Link>
+              </li>
+              <li>
+                <Link href="/security" className="flex items-center gap-1.5 hover:text-foreground transition-colors">
+                  <Sparkles className="h-3.5 w-3.5 text-primary shrink-0" /> AI Clinical Assistance
+                </Link>
+              </li>
+              <li>
+                <Link href="/privacy" className="flex items-center gap-1.5 hover:text-foreground transition-colors">
+                  <Heart className="h-3.5 w-3.5 text-primary shrink-0" /> Patient-Centric Privacy
+                </Link>
+              </li>
             </ul>
           </div>
         </div>
