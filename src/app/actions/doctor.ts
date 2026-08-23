@@ -13,7 +13,7 @@ import {
   type PrescriptionItem,
 } from "@/lib/validations/ai";
 import { createMedicationRemindersForAppointment } from "@/lib/reminders";
-import { processAppointmentPostVisitSummary } from "@/lib/gemini";
+import { processAppointmentPostVisitSummary, processAppointmentPreVisitSummary } from "@/lib/gemini";
 
 export type DoctorActionResult<T = unknown> = {
   success: boolean;
@@ -605,6 +605,41 @@ export async function markAppointmentNoShowAction(
     return {
       success: false,
       error: (error as Error).message || "Failed to mark appointment as No-Show.",
+    };
+  }
+}
+
+// 9. Manual "Generate / Retry AI Pre-Visit Summary" Action
+export async function retryPreVisitSummaryAction(
+  appointmentId: string
+): Promise<DoctorActionResult> {
+  try {
+    await ensureDoctor();
+
+    const appointment = await prisma.appointment.findUnique({
+      where: { id: appointmentId },
+      select: { id: true, symptomText: true },
+    });
+
+    if (!appointment || !appointment.symptomText) {
+      return { success: false, error: "Appointment or symptom text not found." };
+    }
+
+    await processAppointmentPreVisitSummary(appointment.id, appointment.symptomText);
+
+    revalidatePath(`/doctor/appointments/${appointmentId}`);
+    revalidatePath("/doctor/schedule");
+    revalidatePath("/doctor");
+
+    return {
+      success: true,
+      message: "AI Pre-Visit Triage Summary generated successfully!",
+    };
+  } catch (error) {
+    console.error("Error in retryPreVisitSummaryAction:", error);
+    return {
+      success: false,
+      error: (error as Error).message || "Failed to generate AI pre-visit summary.",
     };
   }
 }

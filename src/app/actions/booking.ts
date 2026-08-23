@@ -559,8 +559,8 @@ export async function confirmBookingAction(
       // 4. Success: Clear Redis hold
       await deleteSlotHold(doctorId, isoStartTime);
 
-      // 5. Trigger async Pre-Visit AI Intake summary generation (non-blocking background task)
-      void processAppointmentPreVisitSummary(appointment.id, symptomText.trim());
+      // 5. Trigger Pre-Visit AI Intake summary generation
+      await processAppointmentPreVisitSummary(appointment.id, symptomText.trim());
 
       revalidatePath("/patient/appointments");
       revalidatePath("/admin");

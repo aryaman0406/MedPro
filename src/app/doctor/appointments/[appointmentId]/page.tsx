@@ -29,6 +29,7 @@ import { UrgencyBadge } from "@/components/doctor/urgency-badge";
 import { PreVisitSummaryData, PostVisitSummaryData, PrescriptionItem } from "@/lib/validations/ai";
 import { CompleteVisitDialog } from "@/components/doctor/complete-visit-dialog";
 import { RetryPostVisitSummaryButton } from "@/components/doctor/retry-post-visit-summary-button";
+import { RetryPreVisitSummaryButton } from "@/components/doctor/retry-pre-visit-summary-button";
 
 export default async function DoctorAppointmentDetailPage({
   params,
@@ -449,20 +450,30 @@ export default async function DoctorAppointmentDetailPage({
                   </div>
                 </>
               ) : appointment.preVisitSummaryStatus === "PENDING" ? (
-                <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-6 text-center text-xs text-blue-700 dark:text-blue-300">
-                  <Sparkles className="h-6 w-6 animate-spin mx-auto mb-2 text-blue-600 dark:text-blue-400" />
-                  <p className="font-semibold text-sm">AI Summary Generating...</p>
-                  <p className="text-muted-foreground mt-1 max-w-sm mx-auto">
-                    The pre-visit triage analysis and diagnostic questions are currently being processed. Refresh shortly.
-                  </p>
+                <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-6 text-center text-xs text-blue-700 dark:text-blue-300 space-y-3">
+                  <Sparkles className="h-6 w-6 animate-spin mx-auto text-blue-600 dark:text-blue-400" />
+                  <div>
+                    <p className="font-semibold text-sm">AI Summary Processing...</p>
+                    <p className="text-muted-foreground mt-1 max-w-sm mx-auto">
+                      Click below to generate the pre-visit triage analysis and diagnostic questions immediately.
+                    </p>
+                  </div>
+                  <div className="pt-1">
+                    <RetryPreVisitSummaryButton appointmentId={appointment.id} />
+                  </div>
                 </div>
               ) : (
-                <div className="rounded-xl border bg-muted/40 p-5 text-center text-xs text-muted-foreground">
-                  <AlertCircle className="h-5 w-5 mx-auto mb-1.5 opacity-60" />
-                  <p className="font-semibold text-foreground">Summary Unavailable</p>
-                  <p className="max-w-sm mx-auto mt-1">
-                    An AI pre-visit intake could not be synthesized for this booking. Please review the verbatim symptom notes below.
-                  </p>
+                <div className="rounded-xl border bg-muted/40 p-5 text-center text-xs text-muted-foreground space-y-3">
+                  <AlertCircle className="h-5 w-5 mx-auto opacity-60" />
+                  <div>
+                    <p className="font-semibold text-foreground">Summary Unavailable</p>
+                    <p className="max-w-sm mx-auto mt-1">
+                      An AI pre-visit intake could not be synthesized automatically. Click below to generate now.
+                    </p>
+                  </div>
+                  <div className="pt-1">
+                    <RetryPreVisitSummaryButton appointmentId={appointment.id} />
+                  </div>
                 </div>
               )}
             </CardContent>
