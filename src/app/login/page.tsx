@@ -40,13 +40,6 @@ export default function LoginPage() {
     }
   }, [searchParams]);
 
-  const handleQuickFill = (demoEmail: string, demoPass: string, label: string) => {
-    setEmail(demoEmail);
-    setPassword(demoPass);
-    setErrorMessage(null);
-    toast.info(`Filled ${label} demo credentials.`);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
@@ -92,45 +85,6 @@ export default function LoginPage() {
           <p className="text-sm text-muted-foreground">
             Enter your credentials to access your appointments and schedule.
           </p>
-        </div>
-
-        {/* Quick Fill Demo Bar */}
-        <div className="rounded-xl border bg-muted/40 p-3 space-y-2">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span className="font-semibold text-foreground flex items-center gap-1">
-              <Sparkles className="h-3.5 w-3.5 text-primary" /> 1-Click Demo Fill
-            </span>
-            <span>Pre-seeded accounts</span>
-          </div>
-          <div className="grid grid-cols-3 gap-1.5">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-8 text-xs font-mono"
-              onClick={() => handleQuickFill("admin@medtrack.pro", "AdminPass123!", "Admin")}
-            >
-              Admin
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-8 text-xs font-mono"
-              onClick={() => handleQuickFill("sarah.jenkins@medtrack.pro", "DoctorPass123!", "Doctor")}
-            >
-              Doctor
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-8 text-xs font-mono"
-              onClick={() => handleQuickFill("john.doe@example.com", "PatientPass123!", "Patient")}
-            >
-              Patient
-            </Button>
-          </div>
         </div>
 
         <Card>

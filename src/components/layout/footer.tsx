@@ -27,44 +27,41 @@ export function Footer() {
           <div>
             <h4 className="font-semibold text-foreground mb-3 text-xs uppercase tracking-wider">Patient Portal</h4>
             <ul className="space-y-2 text-xs">
-              <li><Link href="/login" className="hover:text-foreground transition-colors">Book an Appointment</Link></li>
-              <li><Link href="/login" className="hover:text-foreground transition-colors">Find Specialists</Link></li>
-              <li><Link href="/login" className="hover:text-foreground transition-colors">Medical Records & History</Link></li>
+              <li><Link href="/patient/find-doctor" className="hover:text-foreground transition-colors">Book an Appointment</Link></li>
+              <li><Link href="/patient/find-doctor" className="hover:text-foreground transition-colors">Find Specialists</Link></li>
+              <li><Link href="/patient/appointments" className="hover:text-foreground transition-colors">Medical Records &amp; History</Link></li>
               <li><Link href="/register" className="hover:text-foreground transition-colors">Create Patient Account</Link></li>
             </ul>
           </div>
 
           {/* Provider Portal */}
           <div>
-            <h4 className="font-semibold text-foreground mb-3 text-xs uppercase tracking-wider">Providers & Clinics</h4>
+            <h4 className="font-semibold text-foreground mb-3 text-xs uppercase tracking-wider">Providers &amp; Clinics</h4>
             <ul className="space-y-2 text-xs">
-              <li><Link href="/login" className="hover:text-foreground transition-colors">Doctor Schedule Manager</Link></li>
-              <li><Link href="/login" className="hover:text-foreground transition-colors">Leave & Availability</Link></li>
+              <li><Link href="/doctor/schedule" className="hover:text-foreground transition-colors">Doctor Schedule Manager</Link></li>
+              <li><Link href="/doctor/leaves" className="hover:text-foreground transition-colors">Leave &amp; Availability</Link></li>
               <li><Link href="/register" className="hover:text-foreground transition-colors">Provider Registration</Link></li>
-              <li><Link href="/login" className="hover:text-foreground transition-colors">Admin Analytics</Link></li>
+              <li><Link href="/admin" className="hover:text-foreground transition-colors">Admin Analytics</Link></li>
             </ul>
           </div>
 
           {/* Security & Compliance */}
           <div>
-            <h4 className="font-semibold text-foreground mb-3 text-xs uppercase tracking-wider">Trust & Security</h4>
+            <h4 className="font-semibold text-foreground mb-3 text-xs uppercase tracking-wider">Trust &amp; Security</h4>
             <ul className="space-y-2 text-xs">
               <li className="flex items-center gap-1.5"><Shield className="h-3.5 w-3.5 text-primary" /> HIPAA-Compliant Architecture</li>
               <li className="flex items-center gap-1.5"><Sparkles className="h-3.5 w-3.5 text-primary" /> AI Clinical Assistance</li>
               <li className="flex items-center gap-1.5"><Heart className="h-3.5 w-3.5 text-primary" /> Patient-Centric Design</li>
             </ul>
-            <p className="text-[11px] text-muted-foreground/80 mt-4">
-              Demo platform for clinical portfolio and evaluation.
-            </p>
           </div>
         </div>
 
         <div className="mt-8 pt-6 border-t flex flex-col sm:flex-row items-center justify-between text-xs text-muted-foreground gap-4">
           <p>© {new Date().getFullYear()} MedTrack Pro Inc. All rights reserved.</p>
           <div className="flex items-center gap-4">
-            <Link href="#" className="hover:text-foreground transition-colors">Privacy Policy</Link>
-            <Link href="#" className="hover:text-foreground transition-colors">Terms of Service</Link>
-            <Link href="#" className="hover:text-foreground transition-colors">Security Overview</Link>
+            <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link>
+            <Link href="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link>
+            <Link href="/security" className="hover:text-foreground transition-colors">Security Overview</Link>
           </div>
         </div>
       </div>

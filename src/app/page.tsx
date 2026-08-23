@@ -104,26 +104,6 @@ export default function HomePage() {
                   </Link>
                 </Button>
               </div>
-
-              {/* Platform Highlights Strip */}
-              <div className="pt-6 grid grid-cols-2 sm:grid-cols-4 gap-3 border-t">
-                <div className="text-left space-y-0.5">
-                  <div className="text-sm font-bold text-foreground">AI Triage</div>
-                  <div className="text-[11px] text-muted-foreground">Gemini 2.5 Flash</div>
-                </div>
-                <div className="text-left space-y-0.5">
-                  <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400">Live Queue</div>
-                  <div className="text-[11px] text-muted-foreground">Pusher Channels</div>
-                </div>
-                <div className="text-left space-y-0.5">
-                  <div className="text-sm font-bold text-primary">Calendar Sync</div>
-                  <div className="text-[11px] text-muted-foreground">Google OAuth 2.0</div>
-                </div>
-                <div className="text-left space-y-0.5">
-                  <div className="text-sm font-bold text-amber-600 dark:text-amber-400">Reminders</div>
-                  <div className="text-[11px] text-muted-foreground">Brevo + QStash</div>
-                </div>
-              </div>
             </div>
 
             {/* Hero Right 3D-Style Illustration Panel */}
@@ -390,67 +370,6 @@ export default function HomePage() {
             </Button>
           </Card>
         </div>
-      </section>
-
-      {/* 4. Evaluator Quick-Access Demo Credentials Card */}
-      <section className="container mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-        <Card className="border-primary/30 bg-primary/5 shadow-sm">
-          <CardHeader className="text-center pb-3">
-            <div className="mx-auto h-9 w-9 rounded-full bg-primary/20 text-primary flex items-center justify-center mb-1">
-              <Lock className="h-4 w-4" />
-            </div>
-            <CardTitle className="text-xl font-bold font-heading">Evaluator Quick-Access &amp; Demo Credentials</CardTitle>
-            <CardDescription className="text-xs">
-              Test any role immediately with seeded credentials or register a new patient account.
-            </CardDescription>
-          </CardHeader>
-
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 text-xs">
-              {/* Admin Card */}
-              <div className="p-3.5 rounded-xl bg-background border space-y-1.5 shadow-2xs">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-destructive">Admin Role</span>
-                  <Badge variant="destructive" className="text-[10px]">ADMIN</Badge>
-                </div>
-                <p className="font-mono text-muted-foreground text-[11px] truncate">admin@medtrack.pro</p>
-                <p className="font-mono text-foreground font-semibold text-xs">AdminPass123!</p>
-                <p className="text-[10px] text-muted-foreground pt-1 border-t">Access practice analytics &amp; doctor rosters</p>
-              </div>
-
-              {/* Doctor Card */}
-              <div className="p-3.5 rounded-xl bg-background border space-y-1.5 shadow-2xs">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-emerald-600 dark:text-emerald-400">Doctor Role</span>
-                  <Badge variant="success" className="text-[10px]">DOCTOR</Badge>
-                </div>
-                <p className="font-mono text-muted-foreground text-[11px] truncate">sarah.jenkins@medtrack.pro</p>
-                <p className="font-mono text-foreground font-semibold text-xs">DoctorPass123!</p>
-                <p className="text-[10px] text-muted-foreground pt-1 border-t">View live queue, intake briefs &amp; complete visits</p>
-              </div>
-
-              {/* Patient Card */}
-              <div className="p-3.5 rounded-xl bg-background border space-y-1.5 shadow-2xs">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-primary">Patient Role</span>
-                  <Badge variant="secondary" className="text-[10px]">PATIENT</Badge>
-                </div>
-                <p className="font-mono text-muted-foreground text-[11px] truncate">john.doe@example.com</p>
-                <p className="font-mono text-foreground font-semibold text-xs">PatientPass123!</p>
-                <p className="text-[10px] text-muted-foreground pt-1 border-t">Book appointments, check in &amp; view care plans</p>
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-              <Button asChild className="w-full sm:w-auto text-xs px-6">
-                <Link href="/login">Go to Login Screen</Link>
-              </Button>
-              <Button variant="outline" asChild className="w-full sm:w-auto text-xs px-6">
-                <Link href="/register">Register New Account</Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
       </section>
     </PageTransition>
   );
