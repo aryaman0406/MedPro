@@ -241,7 +241,7 @@ npm run test
 
 ## 🌐 Live Production Deployment
 
-- **Live Production URL**: [https://medtrackpro.vercel.app](https://medtrackpro.vercel.app)
+- **Live Production URL**: [https://med-pro-one.vercel.app](https://med-pro-one.vercel.app)
 - **GitHub Repository**: [https://github.com/aryaman0406/MedPro](https://github.com/aryaman0406/MedPro)
 
 ### Production Build Verification

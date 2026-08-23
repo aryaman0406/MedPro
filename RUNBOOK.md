@@ -52,10 +52,10 @@ To enable "Continue with Google" sign-in:
 3. Select Application type: **Web application**.
 4. Set Name: `MedTrack Pro Web Auth Client`.
 5. **Authorized JavaScript origins**:
-   - Production URL: `https://medtrackpro.vercel.app`
+   - Production URL: `https://med-pro-one.vercel.app`
    - Local development: `http://localhost:3000`
 6. **Authorized redirect URIs**:
-   - Production callback: `https://medtrackpro.vercel.app/api/auth/callback/google`
+   - Production callback: `https://med-pro-one.vercel.app/api/auth/callback/google`
    - Local development callback: `http://localhost:3000/api/auth/callback/google`
 7. Click **Create** and note the **Client ID** and **Client Secret**.
 8. Verify **OAuth Consent Screen** has `email` and `profile` scopes enabled.
