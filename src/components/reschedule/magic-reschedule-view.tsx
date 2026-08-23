@@ -59,7 +59,10 @@ export function MagicRescheduleView({
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
 
   const parsedDate = React.useMemo(() => {
-    const [y, m, d] = selectedDate.split("-").map(Number);
+    const parts = selectedDate.split("-").map(Number);
+    const y = parts[0] > 1000 ? parts[0] : parts[2] > 1000 ? parts[2] : parts[0];
+    const m = parts[1];
+    const d = parts[0] > 1000 ? parts[2] : parts[2] > 1000 ? parts[0] : parts[2];
     return new Date(y, m - 1, d);
   }, [selectedDate]);
 

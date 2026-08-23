@@ -140,6 +140,16 @@ export async function getDoctorForBookingAction(doctorId: string) {
   }
 }
 
+function parseDateParts(dateString: string): { year: number; month: number; day: number } {
+  const parts = dateString.split("-").map(Number);
+  if (parts[0] > 1000) {
+    return { year: parts[0], month: parts[1], day: parts[2] };
+  } else if (parts[2] > 1000) {
+    return { year: parts[2], month: parts[1], day: parts[0] };
+  }
+  return { year: parts[0], month: parts[1], day: parts[2] };
+}
+
 // 3. Compute Real-time Available Slots
 export async function getDoctorSlotsAction(
   doctorId: string,
@@ -174,7 +184,7 @@ export async function getDoctorSlotsAction(
       };
     }
 
-    const [year, month, day] = dateString.split("-").map(Number);
+    const { year, month, day } = parseDateParts(dateString);
     const targetDateUtc = new Date(Date.UTC(year, month - 1, day));
     const targetDateLocal = new Date(year, month - 1, day);
 
@@ -594,13 +604,14 @@ export async function confirmBookingAction(
     } catch (insertError: unknown) {
       const errorMsg = (insertError as Error)?.message || "";
       const prismaCode = (insertError as { code?: string })?.code;
+      const fullErrorStr = `${errorMsg} ${String(insertError)}`;
 
       // Detect PostgreSQL GiST exclusion constraint violation (code 23P01 / P2002 / P2010)
       const isExclusionConflict =
-        errorMsg.includes("CONFLICT_SLOT_TAKEN") ||
-        errorMsg.includes("23P01") ||
-        errorMsg.includes("appointments_prevent_overlap") ||
-        errorMsg.includes("exclusion constraint") ||
+        fullErrorStr.includes("CONFLICT_SLOT_TAKEN") ||
+        fullErrorStr.includes("23P01") ||
+        fullErrorStr.includes("appointments_prevent_overlap") ||
+        fullErrorStr.includes("exclusion constraint") ||
         prismaCode === "P2002" ||
         prismaCode === "P2010";
 

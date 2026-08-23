@@ -77,7 +77,10 @@ export async function getDoctorScheduleAction(dateString?: string) {
     let isToday = false;
 
     if (dateString) {
-      const [year, month, day] = dateString.split("-").map(Number);
+      const parts = dateString.split("-").map(Number);
+      const year = parts[0] > 1000 ? parts[0] : parts[2] > 1000 ? parts[2] : parts[0];
+      const month = parts[1];
+      const day = parts[0] > 1000 ? parts[2] : parts[2] > 1000 ? parts[0] : parts[2];
       targetDate = new Date(year, month - 1, day);
       isToday =
         year === todayYear && month - 1 === todayMonth && day === todayDate;
