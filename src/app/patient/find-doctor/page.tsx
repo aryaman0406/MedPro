@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Activity, ArrowRight, Calendar, Clock, Filter, Loader2, RefreshCw, Search, Stethoscope, Star } from "lucide-react";
+import { Activity, ArrowRight, Calendar, Clock, Filter, Loader2, RefreshCw, Search, Stethoscope } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -85,13 +85,13 @@ export default function FindDoctorPage() {
       {/* Header */}
       <div className="space-y-1">
         <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-bold tracking-tight">Find a Medical Specialist</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight font-heading">Find Certified Specialists</h1>
           <Badge variant="secondary" className="font-mono text-xs">
             {doctors.length} Available
           </Badge>
         </div>
         <p className="text-sm text-muted-foreground">
-          Browse certified practitioners, compare specializations, and select a consultation window.
+          Browse certified practitioners, select consultation windows, and reserve 5-minute atomic slot holds.
         </p>
       </div>
 

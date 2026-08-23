@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, Calendar, FileText, LayoutDashboard, LogOut, Menu, Shield, Stethoscope, User, Users, X } from "lucide-react";
+import { Activity, Bell, Calendar, FileText, LayoutDashboard, LogOut, Menu, Shield, Stethoscope, User, Users, X } from "lucide-react";
 import { Role } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
@@ -53,18 +53,20 @@ export function Navbar({ user }: NavbarProps) {
     switch (user.role) {
       case "PATIENT":
         return [
+          { label: "Dashboard", href: "/patient/appointments", icon: LayoutDashboard },
+          { label: "Appointments", href: "/patient/appointments", icon: Calendar },
           { label: "Find a Doctor", href: "/patient/find-doctor", icon: Stethoscope },
-          { label: "My Appointments", href: "/patient/appointments", icon: Calendar },
         ];
       case "DOCTOR":
         return [
-          { label: "My Schedule", href: "/doctor/schedule", icon: Calendar },
+          { label: "Dashboard", href: "/doctor/schedule", icon: LayoutDashboard },
           { label: "Leave", href: "/doctor/leaves", icon: FileText },
         ];
       case "ADMIN":
         return [
-          { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
+          { label: "Overview", href: "/admin", icon: LayoutDashboard },
           { label: "Doctors", href: "/admin/doctors", icon: Users },
+          { label: "Analytics", href: "/admin", icon: Shield },
         ];
       default:
         return [];
@@ -142,6 +144,22 @@ export function Navbar({ user }: NavbarProps) {
         {/* Right Actions */}
         <div className="flex items-center gap-3">
           <ThemeToggle />
+
+          {user && (
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9 relative rounded-full"
+              title="Notifications"
+              aria-label="View notifications"
+            >
+              <Bell className="h-4 w-4 text-muted-foreground" />
+              <span className="absolute top-1 right-1 flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+              </span>
+            </Button>
+          )}
 
           {user ? (
             <DropdownMenu>

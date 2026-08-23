@@ -29,80 +29,109 @@ export default function HomePage() {
   return (
     <PageTransition className="flex flex-col gap-16 pb-20">
       {/* 1. Hero Section */}
-      <section className="relative overflow-hidden pt-12 md:pt-20 lg:pt-24">
+      <section className="relative overflow-hidden pt-8 md:pt-16 lg:pt-20">
         {/* Ambient Gradient Glow */}
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[450px] bg-primary/10 blur-[130px] rounded-full pointer-events-none -z-10" />
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[500px] bg-primary/10 blur-[140px] rounded-full pointer-events-none -z-10" />
 
-        <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center space-y-6">
-          {/* Live System Status Pill */}
-          <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-background/80 px-4 py-1.5 text-xs font-semibold text-primary shadow-xs backdrop-blur-md">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-            </span>
-            <span>MedTrack Pro • Full Clinical Engine Active</span>
-          </div>
-
-          {/* Main Display Headline */}
-          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight max-w-4xl mx-auto leading-[1.1] font-heading">
-            Intelligent Care Scheduling &amp;{" "}
-            <span className="bg-gradient-to-r from-primary via-blue-600 to-cyan-500 bg-clip-text text-transparent">
-              Clinical Follow-Up
-            </span>
-          </h1>
-
-          {/* Subtitle */}
-          <p className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            A comprehensive clinical operations suite unifying patient appointment booking, real-time waiting room queues, AI pre-visit intake, and automated medication reminders.
-          </p>
-
-          {/* Primary Action Buttons */}
-          <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button size="lg" asChild className="w-full sm:w-auto text-base h-12 px-8 shadow-md gap-2 font-medium">
-              <Link href="/patient/find-doctor">
-                Book a Consultation
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
-            <Button size="lg" variant="outline" asChild className="w-full sm:w-auto text-base h-12 px-8 font-medium">
-              <Link href="/login">
-                Access Clinical Portal
-              </Link>
-            </Button>
-          </div>
-
-          {/* Platform Capability Highlights Strip */}
-          <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-3 max-w-4xl mx-auto pt-8 border-t">
-            <div className="p-3.5 rounded-xl bg-card border text-left shadow-2xs">
-              <div className="flex items-center gap-1.5 text-primary font-bold text-sm">
-                <Sparkles className="h-4 w-4" />
-                <span>Google Gemini 2.5</span>
+        <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+            {/* Hero Left Content */}
+            <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
+              {/* Trust Pill Badge */}
+              <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-xs font-bold text-primary shadow-xs">
+                <Sparkles className="h-3.5 w-3.5" />
+                <span className="uppercase tracking-wider">TRUSTED TELEHEALTH PLATFORM</span>
               </div>
-              <div className="text-[11px] text-muted-foreground mt-0.5">Pre-Visit Clinical Briefs</div>
+
+              {/* Main Display Headline */}
+              <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight leading-[1.1] font-heading text-foreground">
+                Healthcare,{" "}
+                <span className="bg-gradient-to-r from-primary via-teal-600 to-emerald-500 bg-clip-text text-transparent block sm:inline">
+                  Reimagined
+                </span>{" "}
+                for the Modern Era.
+              </h1>
+
+              {/* Subtitle */}
+              <p className="text-base sm:text-lg text-muted-foreground max-w-2xl leading-relaxed mx-auto lg:mx-0">
+                Skip the waiting room. Consult certified specialists, manage health records securely, and book 24/7 care from the comfort of your home.
+              </p>
+
+              {/* Action Buttons */}
+              <div className="pt-2 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
+                <Button size="lg" asChild className="w-full sm:w-auto text-sm h-12 px-8 shadow-md gap-2 font-bold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl">
+                  <Link href="/patient/find-doctor">
+                    Book Consultation
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </Button>
+                <Button size="lg" variant="outline" asChild className="w-full sm:w-auto text-sm h-12 px-8 font-semibold rounded-xl">
+                  <Link href="/login">
+                    Explore Specialists
+                  </Link>
+                </Button>
+              </div>
+
+              {/* Platform Highlights Strip */}
+              <div className="pt-6 grid grid-cols-2 sm:grid-cols-4 gap-3 border-t">
+                <div className="text-left space-y-0.5">
+                  <div className="text-sm font-bold text-foreground">AI Triage</div>
+                  <div className="text-[11px] text-muted-foreground">Gemini 2.5 Flash</div>
+                </div>
+                <div className="text-left space-y-0.5">
+                  <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400">Live Queue</div>
+                  <div className="text-[11px] text-muted-foreground">Pusher Channels</div>
+                </div>
+                <div className="text-left space-y-0.5">
+                  <div className="text-sm font-bold text-primary">Calendar Sync</div>
+                  <div className="text-[11px] text-muted-foreground">Google OAuth 2.0</div>
+                </div>
+                <div className="text-left space-y-0.5">
+                  <div className="text-sm font-bold text-amber-600 dark:text-amber-400">Reminders</div>
+                  <div className="text-[11px] text-muted-foreground">Brevo + QStash</div>
+                </div>
+              </div>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-card border text-left shadow-2xs">
-              <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-bold text-sm">
-                <Radio className="h-4 w-4 animate-pulse" />
-                <span>Pusher Channels</span>
-              </div>
-              <div className="text-[11px] text-muted-foreground mt-0.5">Real-Time Waiting Queue</div>
-            </div>
+            {/* Hero Right 3D-Style Illustration Panel */}
+            <div className="lg:col-span-5 relative">
+              <div className="relative mx-auto max-w-md lg:max-w-none rounded-3xl bg-gradient-to-tr from-primary/20 via-teal-500/10 to-emerald-500/20 p-6 shadow-xl border border-primary/20">
+                <div className="space-y-4">
+                  {/* Doctor Graphic Card */}
+                  <div className="rounded-2xl bg-card border p-4 shadow-md flex items-center gap-4">
+                    <div className="h-14 w-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-bold text-lg border border-primary/20">
+                      DR
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-bold text-sm text-foreground">Dr. Sarah Jenkins</h4>
+                        <Badge variant="success" className="text-[10px]">Active Today</Badge>
+                      </div>
+                      <p className="text-xs text-primary font-medium">Cardiology Specialist</p>
+                      <p className="text-[11px] text-muted-foreground">Next Available: 09:30 AM</p>
+                    </div>
+                  </div>
 
-            <div className="p-3.5 rounded-xl bg-card border text-left shadow-2xs">
-              <div className="flex items-center gap-1.5 text-cyan-600 dark:text-cyan-400 font-bold text-sm">
-                <Calendar className="h-4 w-4" />
-                <span>Google Calendar</span>
-              </div>
-              <div className="text-[11px] text-muted-foreground mt-0.5">2-Way Multi-Party Sync</div>
-            </div>
+                  {/* Calendar Widget Graphic Card */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-2xl bg-card border p-3.5 space-y-1 shadow-sm">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-primary">
+                        <Calendar className="h-4 w-4" />
+                        <span>Smart Slots</span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">5-Min Hold Lock</p>
+                    </div>
 
-            <div className="p-3.5 rounded-xl bg-card border text-left shadow-2xs">
-              <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 font-bold text-sm">
-                <Mail className="h-4 w-4" />
-                <span>Brevo + QStash</span>
+                    <div className="rounded-2xl bg-card border p-3.5 space-y-1 shadow-sm">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                        <HeartPulse className="h-4 w-4" />
+                        <span>Real-Time Sync</span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">Zero Refresh Queue</p>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="text-[11px] text-muted-foreground mt-0.5">Medication Reminders</div>
             </div>
           </div>
         </div>

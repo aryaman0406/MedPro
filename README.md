@@ -333,7 +333,7 @@ npm run test
 
 ## 🌐 Live Production Deployment & Known Limitations
 
-- **Live Production URL**: [https://medpro-sable.vercel.app](https://medpro-sable.vercel.app)
+- **Live Production URL**: [https://medtrackpro.vercel.app](https://medtrackpro.vercel.app)
 - **GitHub Repository**: [https://github.com/aryaman0406/MedPro](https://github.com/aryaman0406/MedPro)
 
 ### Known Limitations of the Free-Tier Deployment

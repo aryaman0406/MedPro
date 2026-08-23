@@ -161,11 +161,11 @@ export default function AdminDashboardPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight">Clinic Practice Analytics &amp; Operations</h1>
+            <h1 className="text-3xl font-extrabold tracking-tight font-heading">Clinic Administration</h1>
             <Badge variant="outline" className="font-mono text-xs">ADMIN PORTAL</Badge>
           </div>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Real-time consultation volume trends, specialist weekly capacity utilization, no-show rate analytics, and email delivery health.
+            Overview of whole-clinic operational efficiency, specialist capacity utilization, and recent analytics.
           </p>
         </div>
 

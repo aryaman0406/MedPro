@@ -188,6 +188,7 @@ export default function PatientAppointmentsPage() {
   const [upcoming, setUpcoming] = React.useState<PatientAppointment[]>([]);
   const [past, setPast] = React.useState<PatientAppointment[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [activeTab, setActiveTab] = React.useState("upcoming");
 
   const fetchAppointments = React.useCallback(async () => {
     setIsLoading(true);
@@ -304,12 +305,64 @@ export default function PatientAppointmentsPage() {
 
   return (
     <PageTransition className="container mx-auto max-w-5xl px-4 py-8 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* 1. Welcome Banner Card */}
+      <div className="rounded-3xl bg-gradient-to-r from-primary via-teal-700 to-emerald-700 p-6 md:p-8 text-white shadow-lg relative overflow-hidden">
+        <div className="absolute right-4 top-1/2 -translate-y-1/2 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+        <div className="relative z-10 space-y-2 max-w-2xl">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md text-xs font-semibold text-white">
+            <Sparkles className="h-3.5 w-3.5" />
+            <span>Patient Consultation Portal</span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight font-heading">
+            Welcome back!
+          </h1>
+          <p className="text-xs sm:text-sm text-teal-100 leading-relaxed">
+            {upcoming.length > 0
+              ? `You have ${upcoming.length} upcoming consultation(s) scheduled. Review your details or check in below.`
+              : "Search certified medical specialists to book your next consultation window."}
+          </p>
+        </div>
+      </div>
+
+      {/* 2. Quick Operations Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card className="p-4 flex items-center gap-4 hover:border-primary/50 transition-all cursor-pointer shadow-xs bg-card" onClick={() => window.location.href = "/patient/find-doctor"}>
+          <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0 font-bold">
+            <CalendarPlus className="h-6 w-6" />
+          </div>
+          <div>
+            <h3 className="font-bold text-sm text-foreground">Book Appointment</h3>
+            <p className="text-xs text-muted-foreground">Find certified specialists</p>
+          </div>
+        </Card>
+
+        <Card className="p-4 flex items-center gap-4 hover:border-primary/50 transition-all cursor-pointer shadow-xs bg-card" onClick={() => setActiveTab("past")}>
+          <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 font-bold">
+            <HeartPulse className="h-6 w-6" />
+          </div>
+          <div>
+            <h3 className="font-bold text-sm text-foreground">View Medical History</h3>
+            <p className="text-xs text-muted-foreground">Past visits &amp; AI summaries</p>
+          </div>
+        </Card>
+
+        <Card className="p-4 flex items-center gap-4 hover:border-primary/50 transition-all cursor-pointer shadow-xs bg-card" onClick={() => window.location.href = "/patient/find-doctor"}>
+          <div className="h-12 w-12 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 font-bold">
+            <Stethoscope className="h-6 w-6" />
+          </div>
+          <div>
+            <h3 className="font-bold text-sm text-foreground">Specialist Directory</h3>
+            <p className="text-xs text-muted-foreground">Browse active doctors</p>
+          </div>
+        </Card>
+      </div>
+
+      {/* Header & Actions */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">My Appointments</h1>
-          <p className="text-sm text-muted-foreground">
-            Manage your booked medical consultations and view post-visit care plans.
+          <h2 className="text-xl font-bold tracking-tight">Your Consultations</h2>
+          <p className="text-xs text-muted-foreground">
+            Manage your booked medical appointments and view post-visit care plans.
           </p>
         </div>
 
@@ -340,7 +393,7 @@ export default function PatientAppointmentsPage() {
       />
 
       {/* Tabs */}
-      <Tabs defaultValue="upcoming" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full sm:w-80 grid-cols-2">
           <TabsTrigger value="upcoming" className="text-xs flex items-center gap-1.5">
             <span>Upcoming</span>

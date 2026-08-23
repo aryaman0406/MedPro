@@ -207,44 +207,57 @@ export function DoctorScheduleView({
         </div>
       </div>
 
-      {/* Metrics Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="bg-card/50">
+      {/* Metrics Row (4 Stat Cards matching Figma Doctor Dashboard) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="bg-card shadow-xs">
           <CardHeader className="p-4 pb-2">
-            <CardDescription className="text-xs">Consultations Scheduled</CardDescription>
-            <CardTitle className="text-2xl font-bold flex items-center justify-between">
+            <CardDescription className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Today&apos;s Appointments</CardDescription>
+            <CardTitle className="text-2xl font-extrabold flex items-center justify-between font-mono">
               {stats.total}
-              <CalendarDays className="h-5 w-5 text-muted-foreground opacity-60" />
+              <CalendarDays className="h-5 w-5 text-primary" />
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-0 text-[11px] text-muted-foreground">
-            For {format(parsedDate, "EEEE, MMMM do")}
+            Scheduled for {format(parsedDate, "MMM d")}
           </CardContent>
         </Card>
 
-        <Card className={cn("bg-card/50", stats.highUrgency > 0 && "border-red-500/40 bg-red-500/5")}>
+        <Card className="bg-card shadow-xs">
           <CardHeader className="p-4 pb-2">
-            <CardDescription className="text-xs">High-Urgency Patients</CardDescription>
-            <CardTitle className="text-2xl font-bold flex items-center justify-between text-red-600 dark:text-red-400">
-              {stats.highUrgency}
-              <AlertTriangle className="h-5 w-5 opacity-80" />
+            <CardDescription className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Needs Review</CardDescription>
+            <CardTitle className="text-2xl font-extrabold flex items-center justify-between font-mono text-amber-600 dark:text-amber-400">
+              {appointments.filter(a => a.preVisitSummaryStatus === "PENDING" || a.status === "NEEDS_RESCHEDULE").length}
+              <Sparkles className="h-5 w-5 opacity-80" />
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-0 text-[11px] text-muted-foreground">
-            {isCurrentDay ? "Prioritized at the top of your queue" : "Detected by AI pre-intake"}
+            Pending intake / reschedule triage
           </CardContent>
         </Card>
 
-        <Card className="bg-card/50">
+        <Card className="bg-card shadow-xs">
           <CardHeader className="p-4 pb-2">
-            <CardDescription className="text-xs">Completed Visits</CardDescription>
-            <CardTitle className="text-2xl font-bold flex items-center justify-between text-emerald-600 dark:text-emerald-400">
+            <CardDescription className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Completed Visits</CardDescription>
+            <CardTitle className="text-2xl font-extrabold flex items-center justify-between font-mono text-emerald-600 dark:text-emerald-400">
               {stats.completed}
               <CheckCircle2 className="h-5 w-5 opacity-80" />
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-0 text-[11px] text-muted-foreground">
             Out of {stats.total} scheduled
+          </CardContent>
+        </Card>
+
+        <Card className={cn("bg-card shadow-xs", stats.highUrgency > 0 && "border-red-500/40 bg-red-500/5")}>
+          <CardHeader className="p-4 pb-2">
+            <CardDescription className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">High Urgency Today</CardDescription>
+            <CardTitle className="text-2xl font-extrabold flex items-center justify-between font-mono text-red-600 dark:text-red-400">
+              {stats.highUrgency}
+              <AlertTriangle className="h-5 w-5 opacity-80" />
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 pt-0 text-[11px] text-muted-foreground">
+            Prioritized at top of queue
           </CardContent>
         </Card>
       </div>

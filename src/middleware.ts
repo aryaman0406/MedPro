@@ -65,7 +65,9 @@ export const config = {
   matcher: [
     "/admin",
     "/admin/:path*",
+    "/patient",
     "/patient/:path*",
+    "/doctor",
     "/doctor/:path*",
     "/login",
     "/register",
