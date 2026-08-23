@@ -24,10 +24,6 @@ import {
 } from "@/lib/redis";
 import { WorkingHours, DaySchedule } from "@/lib/validations/admin";
 import { processAppointmentPreVisitSummary } from "@/lib/gemini";
-import {
-  syncAppointmentToGoogleCalendar,
-  deleteAppointmentFromGoogleCalendar,
-} from "@/lib/google-calendar";
 
 export type BookingActionResult<T = unknown> = {
   success: boolean;
@@ -564,9 +560,6 @@ export async function confirmBookingAction(
       // 5. Trigger async Pre-Visit AI Intake summary generation (non-blocking background task)
       void processAppointmentPreVisitSummary(appointment.id, symptomText.trim());
 
-      // 6. Trigger async Google Calendar synchronization (for connected patient and/or doctor)
-      void syncAppointmentToGoogleCalendar(appointment.id);
-
       revalidatePath("/patient/appointments");
       revalidatePath("/admin");
       revalidatePath("/doctor");
@@ -731,9 +724,6 @@ export async function cancelAppointmentAction(
         });
       }
     });
-
-    // 4. Trigger async Google Calendar event deletion
-    void deleteAppointmentFromGoogleCalendar(appointmentId);
 
     revalidatePath("/patient/appointments");
     revalidatePath("/doctor/schedule");

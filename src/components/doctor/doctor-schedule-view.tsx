@@ -28,7 +28,6 @@ import { Badge } from "@/components/ui/badge";
 import { UrgencyBadge } from "@/components/doctor/urgency-badge";
 import { PreVisitSummaryData } from "@/lib/validations/ai";
 import { cn } from "@/lib/utils";
-import { GoogleCalendarCard } from "@/components/calendar/google-calendar-card";
 import { LiveQueuePanel } from "@/components/doctor/live-queue-panel";
 import { markAppointmentNoShowAction } from "@/app/actions/doctor";
 import { PageTransition } from "@/components/ui/page-transition";
@@ -261,12 +260,6 @@ export function DoctorScheduleView({
           </CardContent>
         </Card>
       </div>
-
-      {/* Google Calendar Clinical Sync Card */}
-      <GoogleCalendarCard
-        title="Doctor Clinical Google Calendar Sync"
-        description="Sync all your booked patient consultations directly to your personal Google Calendar."
-      />
 
       {/* Live Pusher Queue Panel (Today's Consultations) */}
       {isCurrentDay && <LiveQueuePanel doctorId={doctorId} />}

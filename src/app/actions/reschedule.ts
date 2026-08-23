@@ -6,10 +6,6 @@ import { AppointmentStatus, EmailStatus, EmailType } from "@prisma/client";
 import { verifyRescheduleToken } from "@/lib/tokens";
 import { processAppointmentPreVisitSummary } from "@/lib/gemini";
 import { WorkingHours, DaySchedule } from "@/lib/validations/admin";
-import {
-  syncAppointmentToGoogleCalendar,
-  deleteAppointmentFromGoogleCalendar,
-} from "@/lib/google-calendar";
 
 export type RescheduleActionResult<T = unknown> = {
   success: boolean;
@@ -217,10 +213,6 @@ export async function rescheduleAppointmentWithTokenAction({
 
     // Trigger async Pre-Visit AI intake analysis in background
     void processAppointmentPreVisitSummary(result.id, oldAppointment.symptomText);
-
-    // Trigger Google Calendar updates (delete old event, sync new event)
-    void deleteAppointmentFromGoogleCalendar(appointmentId);
-    void syncAppointmentToGoogleCalendar(result.id);
 
     revalidatePath("/patient/appointments");
     revalidatePath("/doctor/schedule");

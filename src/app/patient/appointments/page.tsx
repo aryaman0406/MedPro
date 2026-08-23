@@ -31,7 +31,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getPatientAppointmentsAction } from "@/app/actions/booking";
 import { AppointmentStatus } from "@prisma/client";
 import { PostVisitSummaryData, PrescriptionItem } from "@/lib/validations/ai";
-import { GoogleCalendarCard } from "@/components/calendar/google-calendar-card";
 import { PatientQueueCard } from "@/components/patient/patient-queue-card";
 import { PageTransition } from "@/components/ui/page-transition";
 
@@ -385,12 +384,6 @@ export default function PatientAppointmentsPage() {
           </Button>
         </div>
       </div>
-
-      {/* Google Calendar Sync Integration Card */}
-      <GoogleCalendarCard
-        title="Personal Google Calendar Sync"
-        description="Sync your upcoming doctor appointments to Google Calendar with automatic reminder notifications."
-      />
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
