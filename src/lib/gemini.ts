@@ -65,32 +65,39 @@ Respond ONLY with a valid JSON object matching this schema:
         throw new Error("GEMINI_API_KEY is missing or invalid");
       }
 
-      const response = await client.models.generateContent({
-        model: defaultModel,
-        contents: promptText,
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: "object",
-            properties: {
-              urgency: {
-                type: "string",
-                enum: ["Low", "Medium", "High"],
-              },
-              chiefComplaint: {
-                type: "string",
-              },
-              suggestedQuestions: {
-                type: "array",
-                items: {
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Gemini API call timed out after 3.5 seconds")), 3500)
+      );
+
+      const response = await Promise.race([
+        client.models.generateContent({
+          model: defaultModel,
+          contents: promptText,
+          config: {
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: "object",
+              properties: {
+                urgency: {
+                  type: "string",
+                  enum: ["Low", "Medium", "High"],
+                },
+                chiefComplaint: {
                   type: "string",
                 },
+                suggestedQuestions: {
+                  type: "array",
+                  items: {
+                    type: "string",
+                  },
+                },
               },
+              required: ["urgency", "chiefComplaint", "suggestedQuestions"],
             },
-            required: ["urgency", "chiefComplaint", "suggestedQuestions"],
           },
-        },
-      });
+        }),
+        timeoutPromise,
+      ]);
 
       const rawText = response.text?.trim();
       if (!rawText) {
