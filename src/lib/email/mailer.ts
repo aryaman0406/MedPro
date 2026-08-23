@@ -18,13 +18,25 @@ const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
  * Configure Nodemailer Transport for Brevo SMTP
  */
 function createTransporter() {
-  const host = process.env.BREVO_SMTP_HOST || "smtp-relay.brevo.com";
-  const port = Number(process.env.BREVO_SMTP_PORT) || 587;
-  const user = process.env.BREVO_SMTP_USER;
-  const pass = process.env.BREVO_SMTP_KEY;
+  // 1. Gmail SMTP option (if GMAIL_USER & GMAIL_APP_PASSWORD are provided)
+  if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
+    return nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASSWORD,
+      },
+    });
+  }
+
+  // 2. Generic / Brevo / Resend SMTP option
+  const host = process.env.BREVO_SMTP_HOST || process.env.SMTP_HOST || "smtp-relay.brevo.com";
+  const port = Number(process.env.BREVO_SMTP_PORT || process.env.SMTP_PORT) || 587;
+  const user = process.env.BREVO_SMTP_USER || process.env.SMTP_USER;
+  const pass = process.env.BREVO_SMTP_KEY || process.env.SMTP_PASS;
 
   if (!user || !pass) {
-    console.warn("⚠️ Brevo SMTP credentials (BREVO_SMTP_USER / BREVO_SMTP_KEY) not configured.");
+    console.warn("⚠️ SMTP credentials (BREVO_SMTP_USER / BREVO_SMTP_KEY / GMAIL_USER) not configured.");
   }
 
   return nodemailer.createTransport({
@@ -32,7 +44,6 @@ function createTransporter() {
     port,
     secure: port === 465,
     auth: user && pass ? { user, pass } : undefined,
-    // Sensible timeout
     connectionTimeout: 10000,
   });
 }
@@ -51,8 +62,8 @@ export async function sendEmail({
   html: string;
   text?: string;
 }): Promise<{ messageId?: string }> {
-  const user = process.env.BREVO_SMTP_USER;
-  const pass = process.env.BREVO_SMTP_KEY;
+  const user = process.env.BREVO_SMTP_USER || process.env.GMAIL_USER || process.env.SMTP_USER;
+  const pass = process.env.BREVO_SMTP_KEY || process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASS;
 
   if (!user || !pass) {
     console.log(`\n📨 [Simulated Email Dispatch] ───`);
@@ -64,7 +75,10 @@ export async function sendEmail({
   }
 
   const transporter = createTransporter();
-  const from = process.env.EMAIL_FROM || '"MedTrack Pro" <no-reply@medtrack.pro>';
+  const defaultFrom = process.env.GMAIL_USER
+    ? `"MedTrack Pro" <${process.env.GMAIL_USER}>`
+    : '"MedTrack Pro" <no-reply@medtrack.pro>';
+  const from = process.env.EMAIL_FROM || defaultFrom;
 
   try {
     const info = await transporter.sendMail({
