@@ -134,7 +134,7 @@ export default async function DoctorAppointmentDetailPage({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary border border-primary/20 text-lg font-bold">
-              {appointment.patient.name
+              {(appointment.patient?.name || "Patient")
                 .split(" ")
                 .map((n) => n[0])
                 .join("")

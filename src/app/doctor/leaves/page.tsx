@@ -26,7 +26,7 @@ export default async function DoctorLeavesPage() {
     redirect("/doctor/schedule");
   }
 
-  const leavesRes = await getDoctorLeavesAction();
+  const leavesRes = await getDoctorLeavesAction(targetDoctorId);
   const initialLeaves = leavesRes.success && leavesRes.data ? (leavesRes.data as any) : [];
 
   return (

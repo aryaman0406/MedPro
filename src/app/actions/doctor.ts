@@ -366,15 +366,17 @@ export async function retryPostVisitSummaryAction(
 }
 
 // 5. Get Doctor Leaves
-export async function getDoctorLeavesAction() {
+export async function getDoctorLeavesAction(targetDoctorId?: string) {
   try {
-    const { doctorProfile } = await ensureDoctor();
-    if (!doctorProfile) {
+    const { doctorProfile, user } = await ensureDoctor();
+    const docId = targetDoctorId || doctorProfile?.id;
+
+    if (!docId) {
       return { success: false, error: "Doctor profile required." };
     }
 
     const leaves = await prisma.doctorLeave.findMany({
-      where: { doctorId: doctorProfile.id },
+      where: { doctorId: docId },
       orderBy: { date: "asc" },
     });
 
