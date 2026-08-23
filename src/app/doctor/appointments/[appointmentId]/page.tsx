@@ -30,6 +30,7 @@ import { PreVisitSummaryData, PostVisitSummaryData, PrescriptionItem } from "@/l
 import { CompleteVisitDialog } from "@/components/doctor/complete-visit-dialog";
 import { RetryPostVisitSummaryButton } from "@/components/doctor/retry-post-visit-summary-button";
 import { RetryPreVisitSummaryButton } from "@/components/doctor/retry-pre-visit-summary-button";
+import { getGoogleCalendarUrl } from "@/lib/google-calendar-helper";
 
 export default async function DoctorAppointmentDetailPage({
   params,
@@ -74,6 +75,28 @@ export default async function DoctorAppointmentDetailPage({
         </Button>
 
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 text-xs font-semibold text-blue-600 dark:text-blue-400 border-blue-500/30 hover:bg-blue-500/10 gap-1.5"
+            asChild
+          >
+            <a
+              href={getGoogleCalendarUrl({
+                title: `Medical Consultation - ${appointment.patient.name}`,
+                patientName: appointment.patient.name,
+                symptomText: appointment.symptomText,
+                startTime: appointment.startTime,
+                endTime: appointment.endTime,
+              })}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Calendar className="h-3.5 w-3.5" />
+              📅 Add to Google Calendar
+            </a>
+          </Button>
+
           <UrgencyBadge
             urgency={preSummary?.urgency}
             status={appointment.preVisitSummaryStatus}

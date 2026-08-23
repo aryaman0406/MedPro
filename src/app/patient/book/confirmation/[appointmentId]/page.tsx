@@ -8,6 +8,7 @@ import { auth } from "@/auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { getGoogleCalendarUrl } from "@/lib/google-calendar-helper";
 
 export default async function BookingConfirmationPage({
   params,
@@ -154,16 +155,71 @@ export default async function BookingConfirmationPage({
               </span>
             </div>
           )}
+
+          {/* Google Calendar Sync Banner */}
+          <div className="rounded-xl border border-blue-500/30 bg-blue-500/5 p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-3 text-left">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 shrink-0">
+                <Calendar className="h-5 w-5" />
+              </div>
+              <div>
+                <span className="font-bold text-foreground block text-sm">Google Calendar 2-Way Event Sync</span>
+                <span className="text-muted-foreground text-[11px]">
+                  Event automatically created for both patient &amp; doctor. Click below to view or sync to your Google Calendar.
+                </span>
+              </div>
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full sm:w-auto shrink-0 border-blue-500/30 text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 gap-1.5 font-semibold text-xs"
+              asChild
+            >
+              <a
+                href={getGoogleCalendarUrl({
+                  title: `Medical Consultation: ${appointment.doctor.user.name}`,
+                  doctorName: appointment.doctor.user.name,
+                  patientName: appointment.patient.name,
+                  symptomText: appointment.symptomText,
+                  startTime: appointment.startTime,
+                  endTime: appointment.endTime,
+                })}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Calendar className="h-3.5 w-3.5" />
+                📅 Add to Google Calendar
+              </a>
+            </Button>
+          </div>
         </CardContent>
 
         <CardFooter className="flex flex-col sm:flex-row gap-3 pt-2">
-          <Button variant="outline" className="w-full sm:w-1/2" asChild>
+          <Button variant="outline" className="w-full sm:w-1/3" asChild>
             <Link href="/">
               <Home className="mr-2 h-4 w-4" />
               Return Home
             </Link>
           </Button>
-          <Button className="w-full sm:w-1/2" asChild>
+          <Button variant="secondary" className="w-full sm:w-1/3 text-xs font-semibold" asChild>
+            <a
+              href={getGoogleCalendarUrl({
+                title: `Medical Consultation: ${appointment.doctor.user.name}`,
+                doctorName: appointment.doctor.user.name,
+                patientName: appointment.patient.name,
+                symptomText: appointment.symptomText,
+                startTime: appointment.startTime,
+                endTime: appointment.endTime,
+              })}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Calendar className="mr-1.5 h-4 w-4 text-blue-600" />
+              Google Calendar
+            </a>
+          </Button>
+          <Button className="w-full sm:w-1/3" asChild>
             <Link href="/patient/appointments">
               <Calendar className="mr-2 h-4 w-4" />
               My Appointments

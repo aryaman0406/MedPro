@@ -29,6 +29,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getPatientAppointmentsAction } from "@/app/actions/booking";
+import { getGoogleCalendarUrl } from "@/lib/google-calendar-helper";
 import { AppointmentStatus } from "@prisma/client";
 import { PostVisitSummaryData, PrescriptionItem } from "@/lib/validations/ai";
 import { PatientQueueCard } from "@/components/patient/patient-queue-card";
@@ -297,6 +298,36 @@ export default function PatientAppointmentsPage() {
 
           {/* Completed Care Plan Accordion / Details */}
           {isCompleted && <CompletedVisitCarePlan appt={appt} />}
+
+          {/* Google Calendar 1-Click Sync Button */}
+          {appt.status !== "CANCELLED" && (
+            <div className="pt-2 flex items-center justify-between gap-2 border-t text-xs">
+              <span className="text-muted-foreground text-[11px] flex items-center gap-1">
+                <Calendar className="h-3.5 w-3.5 text-blue-500" /> Google Calendar 2-Way Sync
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 gap-1.5 px-2.5 rounded-lg"
+                asChild
+              >
+                <a
+                  href={getGoogleCalendarUrl({
+                    title: `Medical Consultation: ${appt.doctor.user.name}`,
+                    doctorName: appt.doctor.user.name,
+                    symptomText: appt.symptomText,
+                    startTime: appt.startTime,
+                    endTime: appt.endTime,
+                  })}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Calendar className="h-3 w-3" />
+                  📅 Add to Google Calendar
+                </a>
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     );

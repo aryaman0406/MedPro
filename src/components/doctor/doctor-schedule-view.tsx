@@ -30,6 +30,7 @@ import { PreVisitSummaryData } from "@/lib/validations/ai";
 import { cn } from "@/lib/utils";
 import { LiveQueuePanel } from "@/components/doctor/live-queue-panel";
 import { markAppointmentNoShowAction } from "@/app/actions/doctor";
+import { getGoogleCalendarUrl } from "@/lib/google-calendar-helper";
 import { PageTransition } from "@/components/ui/page-transition";
 
 interface AppointmentItem {
@@ -394,6 +395,29 @@ export function DoctorScheduleView({
 
                     {/* Right: Actions */}
                     <div className="flex items-center gap-2 self-end md:self-center shrink-0">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-xs h-9 text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 gap-1.5 font-semibold"
+                        asChild
+                      >
+                        <a
+                          href={getGoogleCalendarUrl({
+                            title: `Medical Consultation - ${appt.patient.name}`,
+                            patientName: appt.patient.name,
+                            symptomText: appt.symptomText,
+                            startTime: appt.startTime,
+                            endTime: appt.endTime,
+                          })}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="Add to Google Calendar"
+                        >
+                          <Calendar className="h-3.5 w-3.5" />
+                          📅 Sync Calendar
+                        </a>
+                      </Button>
+
                       {appt.status === "CONFIRMED" && startObj < new Date() && (
                         <Button
                           size="sm"
