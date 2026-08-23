@@ -134,6 +134,7 @@ export function AddDoctorDialog({ onDoctorAdded }: AddDoctorDialogProps) {
           }
         );
 
+        setOpen(false);
         resetForm();
         onDoctorAdded?.();
       }

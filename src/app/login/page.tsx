@@ -142,13 +142,62 @@ export default function LoginPage() {
               Continue with Google
             </Button>
 
+            {/* Demo Credentials Quick Fill */}
+            <div className="rounded-xl border bg-muted/40 p-3 space-y-2">
+              <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider flex items-center justify-between">
+                <span>⚡ Quick Demo Login</span>
+                <span className="text-[10px] font-normal text-muted-foreground">Click to fill</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs font-semibold hover:border-destructive hover:bg-destructive/10"
+                  onClick={() => {
+                    setEmail("admin@medtrack.pro");
+                    setPassword("AdminPass123!");
+                    toast.info("Admin credentials loaded! Click Sign In.");
+                  }}
+                >
+                  Admin
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs font-semibold hover:border-emerald-500 hover:bg-emerald-500/10"
+                  onClick={() => {
+                    setEmail("sarah.jenkins@medtrack.pro");
+                    setPassword("DoctorPass123!");
+                    toast.info("Doctor credentials loaded! Click Sign In.");
+                  }}
+                >
+                  Doctor
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs font-semibold hover:border-primary hover:bg-primary/10"
+                  onClick={() => {
+                    setEmail("john.doe@example.com");
+                    setPassword("PatientPass123!");
+                    toast.info("Patient credentials loaded! Click Sign In.");
+                  }}
+                >
+                  Patient
+                </Button>
+              </div>
+            </div>
+
             {/* OR Divider */}
             <div className="relative flex items-center justify-center">
               <div className="absolute inset-0 flex items-center">
                 <span className="w-full border-t border-border" />
               </div>
               <span className="relative bg-card px-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                Or email &amp; password
+                Or enter credentials
               </span>
             </div>
 

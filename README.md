@@ -6,6 +6,20 @@ The platform unifies patient booking, concurrent double-booking exclusion, pre-v
 
 ---
 
+## 🔑 Demo Accounts & Access Credentials
+
+| Portal / Role | Email Address | Password | Capabilities & Scope |
+|---|---|---|---|
+| 👑 **Admin Portal** | `admin@medtrack.pro` | `AdminPass123!` | Clinic administration, doctor creation & working hours, leave blackout dates, practice analytics & email retry queue |
+| 🩺 **Doctor Portal** | `sarah.jenkins@medtrack.pro` | `DoctorPass123!` | Cardiology specialist (9:00–17:00), AI pre-visit intake summaries, real-time Pusher waiting room, post-visit notes & prescription builder |
+| 🩺 **Doctor Portal** | `marcus.chen@medtrack.pro` | `DoctorPass123!` | Neurology specialist (8:00–16:00), schedule & leave management |
+| 🩺 **Doctor Portal** | `priya.patel@medtrack.pro` | `DoctorPass123!` | Pediatrics specialist (10:00–18:00), schedule & leave management |
+| 👤 **Patient Portal** | `john.doe@example.com` | `PatientPass123!` | Doctor search by specialization, slot selection with 5-min holds, symptom intake, real-time queue tracker & medication schedule |
+
+> *Note: On the [`/login`](file:///c:/Users/acer/Desktop/MedPro/src/app/login/page.tsx) page, you can also click the **⚡ Quick Demo Login** buttons for Admin, Doctor, or Patient to instantly auto-fill these credentials.*
+
+---
+
 ## 🌟 Standout Capabilities & Architecture Highlights
 
 1. **Dual Sign-In & Role-Preserving OAuth 2.0**:
