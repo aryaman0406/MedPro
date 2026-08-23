@@ -371,6 +371,68 @@ export default function HomePage() {
           </Card>
         </div>
       </section>
+
+      {/* 4. For Evaluators: Muted / Secondary Demo Credentials Section (Just above Footer) */}
+      <section className="container mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 border-t pt-10 pb-4">
+        <div className="rounded-2xl border border-border/60 bg-muted/30 p-6 md:p-8 text-center space-y-6">
+          <div className="space-y-2 max-w-lg mx-auto">
+            <Badge variant="outline" className="text-[11px] font-mono border-muted-foreground/30 text-muted-foreground uppercase tracking-wider">
+              Evaluator Quick-Access &amp; Demo Credentials
+            </Badge>
+            <h3 className="text-xl font-bold tracking-tight text-foreground font-heading">For Evaluators</h3>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Use these pre-seeded demo accounts to evaluate role-based features across Admin, Doctor, and Patient portals.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left text-xs">
+            {/* Admin Credentials */}
+            <div className="rounded-xl border border-border/80 bg-card p-4 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-foreground flex items-center gap-1.5">👑 Admin Portal</span>
+                <Badge variant="outline" className="text-[10px] bg-rose-500/10 text-rose-600 border-rose-500/20">ADMIN</Badge>
+              </div>
+              <div className="space-y-1 font-mono text-[11px] text-muted-foreground bg-muted/50 p-2.5 rounded-lg border">
+                <p>Email: <span className="text-foreground font-semibold">admin@medtrack.pro</span></p>
+                <p>Password: <span className="text-foreground font-semibold">AdminPass123!</span></p>
+              </div>
+              <Button size="sm" variant="ghost" asChild className="w-full text-[11px] h-8 text-primary hover:bg-primary/10 font-semibold">
+                <Link href="/login">Log in as Admin →</Link>
+              </Button>
+            </div>
+
+            {/* Doctor Credentials */}
+            <div className="rounded-xl border border-border/80 bg-card p-4 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-foreground flex items-center gap-1.5">🩺 Doctor Portal</span>
+                <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-600 border-emerald-500/20">DOCTOR</Badge>
+              </div>
+              <div className="space-y-1 font-mono text-[11px] text-muted-foreground bg-muted/50 p-2.5 rounded-lg border">
+                <p>Email: <span className="text-foreground font-semibold">sarah.jenkins@medtrack.pro</span></p>
+                <p>Password: <span className="text-foreground font-semibold">DoctorPass123!</span></p>
+              </div>
+              <Button size="sm" variant="ghost" asChild className="w-full text-[11px] h-8 text-primary hover:bg-primary/10 font-semibold">
+                <Link href="/login">Log in as Doctor →</Link>
+              </Button>
+            </div>
+
+            {/* Patient Credentials */}
+            <div className="rounded-xl border border-border/80 bg-card p-4 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-foreground flex items-center gap-1.5">👤 Patient Portal</span>
+                <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/20">PATIENT</Badge>
+              </div>
+              <div className="space-y-1 font-mono text-[11px] text-muted-foreground bg-muted/50 p-2.5 rounded-lg border">
+                <p>Email: <span className="text-foreground font-semibold">john.doe@example.com</span></p>
+                <p>Password: <span className="text-foreground font-semibold">PatientPass123!</span></p>
+              </div>
+              <Button size="sm" variant="ghost" asChild className="w-full text-[11px] h-8 text-primary hover:bg-primary/10 font-semibold">
+                <Link href="/login">Log in as Patient →</Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
     </PageTransition>
   );
 }
