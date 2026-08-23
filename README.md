@@ -2,19 +2,22 @@
 
 **MedTrack Pro** is a comprehensive, production-grade clinical scheduling and healthcare operations suite engineered with **Next.js 15 App Router**, **TypeScript**, **PostgreSQL (Prisma ORM)**, **Auth.js v5 (Google OAuth 2.0 & Credentials)**, **Google Gemini AI (2.5 Flash)**, **Pusher Channels**, **Upstash Redis/QStash**, **Resend/Brevo SMTP**, and **Google Calendar 2-Way Sync**.
 
-The platform unifies patient booking, concurrent double-booking exclusion, pre-visit AI diagnostic triage, real-time waiting room queues, post-visit structured prescription care plans, background medication adherence reminders, practice analytics, and role-based authentication.
+The platform unifies patient booking, concurrent double-booking exclusion, pre-visit AI diagnostic triage, real-time waiting room queues, post-visit structured prescription care plans, 1-click care plan PDF exports, background medication adherence reminders, practice analytics, and role-based authentication.
+
+- **🌐 Live Production Deployment**: [https://med-pro-one.vercel.app](https://med-pro-one.vercel.app)
+- **💻 GitHub Source Repository**: [https://github.com/aryaman0406/MedPro](https://github.com/aryaman0406/MedPro)
 
 ---
 
 ## 🔑 Demo Accounts & Access Credentials
 
-| Portal / Role | Email Address | Password | Capabilities & Direct Sign-In Link |
+| Portal / Role | Email Address | Password | Capabilities & Direct 1-Click Sign-In Link |
 |---|---|---|---|
 | 👑 **Admin Portal** | `admin@medtrack.pro` | `AdminPass123!` | Clinic administration, doctor creation & working hours, leave blackout dates, practice analytics & email retry queue $\rightarrow$ [Log in as Admin](https://med-pro-one.vercel.app/login?role=ADMIN) |
 | 🩺 **Doctor Portal** | `sarah.jenkins@medtrack.pro` | `DoctorPass123!` | Cardiology specialist (9:00–17:00), AI pre-visit intake summaries, real-time Pusher waiting room, post-visit notes & prescription builder $\rightarrow$ [Log in as Doctor](https://med-pro-one.vercel.app/login?role=DOCTOR) |
 | 🩺 **Doctor Portal** | `marcus.chen@medtrack.pro` | `DoctorPass123!` | Neurology specialist (8:00–16:00), schedule & leave management $\rightarrow$ [Log in as Doctor](https://med-pro-one.vercel.app/login?role=DOCTOR) |
 | 🩺 **Doctor Portal** | `priya.patel@medtrack.pro` | `DoctorPass123!` | Pediatrics specialist (10:00–18:00), schedule & leave management $\rightarrow$ [Log in as Doctor](https://med-pro-one.vercel.app/login?role=DOCTOR) |
-| 👤 **Patient Portal** | `john.doe@example.com` | `PatientPass123!` | Doctor search by specialization, slot selection with 5-min holds, symptom intake, real-time queue tracker & medication schedule $\rightarrow$ [Log in as Patient](https://med-pro-one.vercel.app/login?role=PATIENT) |
+| 👤 **Patient Portal** | `john.doe@example.com` | `PatientPass123!` | Doctor search with 1-click filter chips, slot selection with 5-min holds, symptom & photo intake, real-time queue tracker & medication schedule $\rightarrow$ [Log in as Patient](https://med-pro-one.vercel.app/login?role=PATIENT) |
 
 > *Note: Clicking any portal link above opens [`/login`](https://med-pro-one.vercel.app/login) directly activated on that specific portal tab (`Admin`, `Doctor`, or `Patient`).*
 
@@ -37,26 +40,114 @@ The platform unifies patient booking, concurrent double-booking exclusion, pre-v
    - Awaited synchronously during booking confirmation to guarantee immediate availability on doctor dashboards.
    - Includes a 1-click **⚡ Generate AI Summary Now** button for manual re-synthesis.
 
-4. **Post-Visit Patient Brief & Care Plan Generation**:
+4. **📸 Patient Symptom Photo / Attachment Upload**:
+   - Allows patients to attach symptom photos, skin lesions, or lab reports during intake booking.
+   - Preserves attachment preview thumbnails on both patient and doctor consultation detail dashboards.
+
+5. **🖨️ 1-Click Isolated Care Plan PDF Exporter**:
+   - Provides a 1-click **"Print Care Plan PDF"** button on patient and doctor consultation pages.
+   - Features targeted CSS `@media print` rules that isolate the selected appointment card into a clean, 1-page formal medical report while automatically suppressing non-printable navigation bars, headers, and footers.
+
+6. **Post-Visit Patient Brief & Care Plan Generation**:
    - Converts doctor's clinical encounter notes and structured prescriptions (`medicineName`, `dosage`, `frequencyPerDay`, `durationDays`) into warm, patient-friendly plain summaries.
    - Generates structured medication schedules and follow-up action items stored in `postVisitSummaryJson`.
 
-5. **Real-Time Clinical Queue & Patient Position Tracker (Pusher Channels)**:
+7. **Real-Time Clinical Queue & Patient Position Tracker (Pusher Channels)**:
    - 30-minute pre-visit physical check-in window.
    - Live FIFO waiting room ordered strictly by check-in timestamp (`checkedInAt asc`) on the doctor's portal.
    - Instant *"Call Next Patient"* broadcast transitioning patients to `IN_PROGRESS` and updating the patient's screen (*"You are #N in queue"*) with zero browser refreshes.
 
-6. **Multi-Party Google Calendar 2-Way Sync**:
+8. **Multi-Party Google Calendar 2-Way Sync**:
    - 1-Click **`📅 Add to Google Calendar`** buttons across Booking Confirmation, Patient Appointments, Doctor Schedule, and Doctor Encounter Detail pages.
    - Pre-populates exact appointment start/end times, doctor name, patient name, clinic location, and clinical symptoms.
 
-7. **Double-Booking Exclusion & Redis Hold Locks**:
+9. **Double-Booking Exclusion & Redis Hold Locks**:
    - PostgreSQL GiST exclusion constraint (`prisma/migrations/20260821_add_appointment_exclusion_constraint`) preventing overlapping active appointments.
    - Atomic 5-minute Upstash Redis slot hold locks (`SET NX EX 300`) while patients enter symptoms.
 
-8. **Automated Medication Reminders & Dead Letter Queue**:
-   - Upstash QStash 15-minute background cron worker scanning pending reminders and sending adherence emails via Brevo/Nodemailer HTML templates.
-   - Automated retry worker for failed emails with an interactive Dead Letter Queue dashboard on `/admin`.
+10. **Automated Medication Reminders & Dead Letter Queue**:
+    - Upstash QStash 15-minute background cron worker scanning pending reminders and sending adherence emails via Brevo/Nodemailer HTML templates.
+    - Automated retry worker for failed emails with an interactive Dead Letter Queue dashboard on `/admin`.
+
+---
+
+## 📊 Database Schema & Entity Relationship Overview
+
+```mermaid
+erDiagram
+    User ||--o| DoctorProfile : "has profile"
+    User ||--o{ Appointment : "patient of"
+    User ||--o{ EmailLog : "receives"
+    DoctorProfile ||--o{ DoctorLeave : "registers"
+    DoctorProfile ||--o{ Appointment : "conducts"
+    Appointment ||--o{ MedicationReminder : "generates"
+    Appointment ||--o{ CalendarEvent : "syncs to"
+
+    User {
+        string id PK
+        string email UK
+        string name
+        string passwordHash
+        Role role "PATIENT | DOCTOR | ADMIN"
+        string phone
+        datetime createdAt
+    }
+
+    DoctorProfile {
+        string id PK
+        string userId FK
+        string specialization
+        string bio
+        int slotDurationMinutes "30 | 45"
+        json workingHours
+        boolean isActive
+    }
+
+    DoctorLeave {
+        string id PK
+        string doctorId FK
+        datetime date
+        string reason
+    }
+
+    Appointment {
+        string id PK
+        string doctorId FK
+        string patientId FK
+        datetime startTime
+        datetime endTime
+        AppointmentStatus status "CONFIRMED | IN_PROGRESS | COMPLETED | CANCELLED | NO_SHOW | NEEDS_RESCHEDULE"
+        string symptomText
+        string symptomImage
+        datetime checkedInAt
+        string preVisitSummaryStatus
+        json preVisitSummaryJson
+        string postVisitNotes
+        string postVisitSummaryStatus
+        json postVisitSummaryJson
+        json prescriptionJson
+    }
+
+    MedicationReminder {
+        string id PK
+        string appointmentId FK
+        string medicineName
+        string dosage
+        datetime scheduledFor
+        string status "PENDING | SENT | FAILED"
+    }
+
+    EmailLog {
+        string id PK
+        string recipient
+        string type "BOOKING_CONFIRMATION | REMINDER | CANCELLATION | LEAVE_NOTICE | MEDICATION_REMINDER"
+        string subject
+        string bodyHtml
+        string status "PENDING | SENT | FAILED | DEAD"
+        int attempts
+        string lastError
+    }
+```
 
 ---
 
@@ -131,7 +222,7 @@ npm run lint
 
 ---
 
-## 🌐 Live Production Deployment
+## 🌐 Submission Links & Deployment
 
 - **Live Production URL**: [https://med-pro-one.vercel.app](https://med-pro-one.vercel.app)
-- **GitHub Repository**: [https://github.com/aryaman0406/MedPro](https://github.com/aryaman0406/MedPro)
+- **GitHub Source Repository**: [https://github.com/aryaman0406/MedPro](https://github.com/aryaman0406/MedPro)
