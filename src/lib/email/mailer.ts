@@ -7,6 +7,7 @@ import {
   renderCancellationEmail,
   renderLeaveNoticeEmail,
   renderMedicationReminderEmail,
+  renderRescheduleNoticeEmail,
 } from "@/lib/email/templates";
 import { generateRescheduleToken } from "@/lib/tokens";
 
@@ -233,6 +234,28 @@ export async function processEmailQueue(
             specialization: appt.doctor.specialization,
             originalDate: new Date(appt.startTime),
             rescheduleUrl,
+          });
+          subject = rendered.subject;
+          html = rendered.html;
+          text = rendered.text;
+          break;
+        }
+
+        case EmailType.RESCHEDULE_NOTICE: {
+          if (!appt) throw new Error("Associated appointment not found for reschedule notice email.");
+
+          const isDoctorRecipient = emailLog.toEmail === appt.doctor.user.email;
+          const rendered = renderRescheduleNoticeEmail({
+            isDoctor: isDoctorRecipient,
+            patientName: appt.patient.name,
+            doctorName: appt.doctor.user.name,
+            specialization: appt.doctor.specialization,
+            originalStartTime: new Date(appt.createdAt),
+            newStartTime: new Date(appt.startTime),
+            newEndTime: new Date(appt.endTime),
+            portalUrl: isDoctorRecipient
+              ? `${baseUrl}/doctor/appointments/${appt.id}`
+              : `${baseUrl}/patient/appointments`,
           });
           subject = rendered.subject;
           html = rendered.html;

@@ -1004,26 +1004,26 @@ export async function adminReassignAppointmentAction(
         },
       });
 
-      // 2. Queue BOOKING_CONFIRMATION EmailLog for Patient
+      // 2. Queue RESCHEDULE_NOTICE EmailLog for Patient
       if (oldAppointment.patient.email) {
         await tx.emailLog.create({
           data: {
             appointmentId: updatedAppt.id,
             toEmail: oldAppointment.patient.email,
-            type: EmailType.BOOKING_CONFIRMATION,
+            type: EmailType.RESCHEDULE_NOTICE,
             status: EmailStatus.PENDING,
             attempts: 0,
           },
         });
       }
 
-      // 3. Queue BOOKING_CONFIRMATION EmailLog for new Doctor
+      // 3. Queue RESCHEDULE_NOTICE EmailLog for assigned Doctor
       if (targetDoctor.user.email) {
         await tx.emailLog.create({
           data: {
             appointmentId: updatedAppt.id,
             toEmail: targetDoctor.user.email,
-            type: EmailType.BOOKING_CONFIRMATION,
+            type: EmailType.RESCHEDULE_NOTICE,
             status: EmailStatus.PENDING,
             attempts: 0,
           },

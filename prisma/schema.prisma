@@ -29,6 +29,7 @@ enum EmailType {
   CANCELLATION
   LEAVE_NOTICE
   MEDICATION_REMINDER
+  RESCHEDULE_NOTICE
 }
 
 enum EmailStatus {

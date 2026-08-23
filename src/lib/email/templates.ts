@@ -384,3 +384,79 @@ export function renderMedicationReminderEmail(params: {
 
   return { subject, html, text };
 }
+
+// 6. Admin Reschedule Notice Template
+export function renderRescheduleNoticeEmail(params: {
+  isDoctor: boolean;
+  patientName: string;
+  doctorName: string;
+  specialization: string;
+  originalStartTime: Date;
+  newStartTime: Date;
+  newEndTime: Date;
+  portalUrl: string;
+}): { subject: string; html: string; text: string } {
+  const oldDateStr = format(params.originalStartTime, "EEEE, MMMM do, yyyy 'at' hh:mm a");
+  const newDateStr = format(params.newStartTime, "EEEE, MMMM do, yyyy");
+  const newTimeStr = `${format(params.newStartTime, "hh:mm a")} - ${format(params.newEndTime, "hh:mm a")}`;
+
+  const subject = params.isDoctor
+    ? `Schedule Update: Consultation for ${params.patientName} Rescheduled`
+    : `Appointment Rescheduled: Your Consultation with ${params.doctorName}`;
+
+  const recipientGreeting = params.isDoctor ? `Hello ${params.doctorName},` : `Hello ${params.patientName},`;
+  const mainMessage = params.isDoctor
+    ? `A patient consultation has been rescheduled in your clinic calendar by administration.`
+    : `Your medical consultation has been successfully rescheduled by clinic administration to a new date and time.`;
+
+  const html = renderBrandedLayout({
+    previewText: `Your consultation has been rescheduled to ${newDateStr} at ${newTimeStr}`,
+    headline: "Consultation Rescheduled",
+    badgeText: "RESCHEDULED",
+    badgeColor: "#0284c7",
+    childrenHtml: `
+      <p style="font-size: 15px; margin-top: 0; font-weight: 600;">${recipientGreeting}</p>
+      <p style="margin-bottom: 20px;">${mainMessage}</p>
+
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f0f9ff; border: 1px solid #bae6fd; border-radius: 12px; margin: 20px 0; border-collapse: separate; overflow: hidden;">
+        <tr>
+          <td colspan="2" style="font-weight: 700; font-size: 14px; color: #0369a1; border-bottom: 1px solid #bae6fd; padding: 12px 16px; background-color: #e0f2fe;">
+            📅 Updated Consultation Details
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 16px; font-size: 13px; color: #0369a1; font-weight: 600; width: 140px; border-bottom: 1px solid #bae6fd;">Assigned Doctor:</td>
+          <td style="padding: 10px 16px; font-size: 13px; color: #0f172a; font-weight: 700; border-bottom: 1px solid #bae6fd;">${params.doctorName} <span style="font-weight: 500; color: #64748b;">(${params.specialization})</span></td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 16px; font-size: 13px; color: #0369a1; font-weight: 600; border-bottom: 1px solid #bae6fd;">Patient Name:</td>
+          <td style="padding: 10px 16px; font-size: 13px; color: #0f172a; font-weight: 700; border-bottom: 1px solid #bae6fd;">${params.patientName}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 16px; font-size: 13px; color: #0369a1; font-weight: 600; border-bottom: 1px solid #bae6fd;">Previous Time:</td>
+          <td style="padding: 10px 16px; font-size: 13px; color: #64748b; font-weight: 500; text-decoration: line-through; border-bottom: 1px solid #bae6fd;">${oldDateStr}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 16px; font-size: 13px; color: #0369a1; font-weight: 600; border-bottom: 1px solid #bae6fd;">New Date:</td>
+          <td style="padding: 10px 16px; font-size: 13px; color: #0369a1; font-weight: 700; border-bottom: 1px solid #bae6fd;">${newDateStr}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 16px; font-size: 13px; color: #0369a1; font-weight: 600;">New Time Window:</td>
+          <td style="padding: 10px 16px; font-size: 13px; color: #0369a1; font-weight: 700;">${newTimeStr}</td>
+        </tr>
+      </table>
+
+      <p style="font-size: 13px; color: #64748b;">
+        Your consultation is confirmed for the new time slot. No further action is required.
+      </p>
+
+      <div style="text-align: center; margin-top: 28px;">
+        <a href="${params.portalUrl}" class="btn">View Updated Appointment</a>
+      </div>
+    `,
+  });
+
+  const text = `${subject}\n\n${recipientGreeting}\n\n${mainMessage}\n\nDoctor: ${params.doctorName} (${params.specialization})\nPatient: ${params.patientName}\nPrevious Time: ${oldDateStr}\nNew Date: ${newDateStr}\nNew Time Window: ${newTimeStr}\n\nView Portal: ${params.portalUrl}`;
+
+  return { subject, html, text };
+}
