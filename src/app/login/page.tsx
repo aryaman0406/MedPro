@@ -310,10 +310,22 @@ export default function LoginPage() {
 
           <CardFooter className="flex flex-col space-y-4 pt-0">
             <div className="text-center text-xs text-muted-foreground">
-              Don&apos;t have an account?{" "}
-              <Link href="/register" className="font-semibold text-primary underline-offset-4 hover:underline">
-                Create a patient account
-              </Link>
+              {selectedRole === "DOCTOR" ? (
+                <span>
+                  New practitioner? Doctor profiles are issued by your Clinic Administrator.
+                </span>
+              ) : selectedRole === "ADMIN" ? (
+                <span>
+                  Secured Portal • Authorized Clinic Administration Access Only.
+                </span>
+              ) : (
+                <>
+                  Don&apos;t have an account?{" "}
+                  <Link href="/register" className="font-semibold text-primary underline-offset-4 hover:underline">
+                    Create a patient account
+                  </Link>
+                </>
+              )}
             </div>
           </CardFooter>
         </Card>
