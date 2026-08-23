@@ -10,6 +10,7 @@ export interface BrandedEmailProps {
 
 /**
  * Shared Branded HTML Layout with MedTrack Pro Header, Container, and Footer
+ * Engineered with 100% email-client compatible table layouts (Gmail, Outlook, Apple Mail).
  */
 export function renderBrandedLayout({
   previewText,
@@ -42,10 +43,6 @@ export function renderBrandedLayout({
     .logo-badge { display: inline-block; background: #0284c7; color: #ffffff; font-weight: 800; font-size: 14px; padding: 6px 14px; border-radius: 8px; margin-bottom: 12px; letter-spacing: 0.5px; }
     .header h1 { margin: 0; font-size: 22px; font-weight: 700; color: #ffffff; line-height: 1.3; }
     .content { padding: 32px 28px; line-height: 1.6; font-size: 14px; color: #334155; }
-    .card { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; margin: 20px 0; }
-    .info-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; }
-    .info-label { color: #64748b; font-weight: 500; }
-    .info-value { color: #0f172a; font-weight: 600; text-align: right; }
     .btn { display: inline-block; background-color: #0284c7; color: #ffffff !important; font-weight: 600; font-size: 14px; padding: 12px 28px; text-decoration: none; border-radius: 10px; margin: 16px 0; text-align: center; }
     .btn-secondary { background-color: #e2e8f0; color: #0f172a !important; }
     .badge { display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -107,7 +104,7 @@ export function renderBookingConfirmationEmail(params: {
 
   const recipientGreeting = params.isDoctor ? `Hello ${params.doctorName},` : `Hello ${params.patientName},`;
   const mainMessage = params.isDoctor
-    ? `A new patient consultation has been scheduled with you. Below are the appointment details and intake symptoms.`
+    ? `A new patient consultation has been scheduled in your clinic calendar. Please review the appointment overview and intake symptoms below.`
     : `Your medical consultation has been successfully booked and confirmed in the clinic schedule.`;
 
   const html = renderBrandedLayout({
@@ -116,47 +113,54 @@ export function renderBookingConfirmationEmail(params: {
     badgeText: "CONFIRMED",
     badgeColor: "#10b981",
     childrenHtml: `
-      <p style="font-size: 15px; margin-top: 0;">${recipientGreeting}</p>
-      <p>${mainMessage}</p>
+      <p style="font-size: 15px; margin-top: 0; font-weight: 600;">${recipientGreeting}</p>
+      <p style="margin-bottom: 20px;">${mainMessage}</p>
 
-      <div class="card">
-        <div style="font-weight: 700; font-size: 14px; margin-bottom: 12px; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
-          Appointment Overview
-        </div>
-        <div class="info-row">
-          <span class="info-label">Doctor</span>
-          <span class="info-value">${params.doctorName} (${params.specialization})</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Patient</span>
-          <span class="info-value">${params.patientName} (${params.patientEmail})</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Date</span>
-          <span class="info-value">${dateStr}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Time Window</span>
-          <span class="info-value">${timeStr}</span>
-        </div>
-      </div>
+      <!-- Formal HTML Table Layout for Maximum Email Client Compatibility -->
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; margin: 20px 0; border-collapse: separate; overflow: hidden;">
+        <tr>
+          <td colspan="2" style="font-weight: 700; font-size: 14px; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding: 12px 16px; background-color: #f1f5f9;">
+            📋 Appointment Overview
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 16px; font-size: 13px; color: #64748b; font-weight: 600; width: 140px; border-bottom: 1px solid #e2e8f0;">Doctor Name:</td>
+          <td style="padding: 10px 16px; font-size: 13px; color: #0f172a; font-weight: 700; border-bottom: 1px solid #e2e8f0;">${params.doctorName} <span style="font-weight: 500; color: #64748b;">(${params.specialization})</span></td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 16px; font-size: 13px; color: #64748b; font-weight: 600; border-bottom: 1px solid #e2e8f0;">Patient Name:</td>
+          <td style="padding: 10px 16px; font-size: 13px; color: #0f172a; font-weight: 700; border-bottom: 1px solid #e2e8f0;">${params.patientName}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 16px; font-size: 13px; color: #64748b; font-weight: 600; border-bottom: 1px solid #e2e8f0;">Patient Email:</td>
+          <td style="padding: 10px 16px; font-size: 13px; color: #0284c7; font-weight: 600; border-bottom: 1px solid #e2e8f0;">${params.patientEmail}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 16px; font-size: 13px; color: #64748b; font-weight: 600; border-bottom: 1px solid #e2e8f0;">Appointment Date:</td>
+          <td style="padding: 10px 16px; font-size: 13px; color: #0f172a; font-weight: 700; border-bottom: 1px solid #e2e8f0;">${dateStr}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 16px; font-size: 13px; color: #64748b; font-weight: 600;">Time Window:</td>
+          <td style="padding: 10px 16px; font-size: 13px; color: #0f172a; font-weight: 700;">${timeStr}</td>
+        </tr>
+      </table>
 
-      <div style="margin: 18px 0;">
-        <span style="font-weight: 700; color: #0f172a; font-size: 13px; display: block; margin-bottom: 6px;">
+      <div style="margin: 20px 0;">
+        <span style="font-weight: 700; color: #0f172a; font-size: 13px; display: block; margin-bottom: 8px;">
           Intake Symptoms &amp; Notes:
         </span>
-        <div style="background-color: #f1f5f9; padding: 12px 16px; border-radius: 8px; font-style: italic; font-size: 13px; color: #334155;">
+        <div style="background-color: #f1f5f9; padding: 14px 18px; border-radius: 10px; font-style: italic; font-size: 13px; color: #334155; border-left: 4px solid #0284c7;">
           "${params.symptomText}"
         </div>
       </div>
 
-      <div style="text-align: center; margin-top: 24px;">
+      <div style="text-align: center; margin-top: 28px;">
         <a href="${params.portalUrl}" class="btn">View Appointment in Portal</a>
       </div>
     `,
   });
 
-  const text = `${subject}\n\n${recipientGreeting}\n\n${mainMessage}\n\nDoctor: ${params.doctorName} (${params.specialization})\nPatient: ${params.patientName}\nDate: ${dateStr}\nTime: ${timeStr}\nSymptoms: "${params.symptomText}"\n\nView Portal: ${params.portalUrl}`;
+  const text = `${subject}\n\n${recipientGreeting}\n\n${mainMessage}\n\nDoctor Name: ${params.doctorName} (${params.specialization})\nPatient Name: ${params.patientName}\nPatient Email: ${params.patientEmail}\nAppointment Date: ${dateStr}\nTime Window: ${timeStr}\nIntake Symptoms: "${params.symptomText}"\n\nView Portal: ${params.portalUrl}`;
 
   return { subject, html, text };
 }
@@ -181,30 +185,36 @@ export function renderAppointmentReminderEmail(params: {
     badgeText: "UPCOMING",
     badgeColor: "#0284c7",
     childrenHtml: `
-      <p style="font-size: 15px; margin-top: 0;">Hello ${params.patientName},</p>
+      <p style="font-size: 15px; margin-top: 0; font-weight: 600;">Hello ${params.patientName},</p>
       <p>This is a friendly reminder for your upcoming medical consultation scheduled for tomorrow.</p>
 
-      <div class="card">
-        <div style="font-weight: 700; font-size: 14px; margin-bottom: 12px; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
-          Appointment Details
-        </div>
-        <div class="info-row">
-          <span class="info-label">Doctor</span>
-          <span class="info-value">${params.doctorName}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Specialization</span>
-          <span class="info-value">${params.specialization}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Date</span>
-          <span class="info-value">${dateStr}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Time Window</span>
-          <span class="info-value">${timeStr}</span>
-        </div>
-      </div>
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; margin: 20px 0; border-collapse: separate; overflow: hidden;">
+        <tr>
+          <td colspan="2" style="font-weight: 700; font-size: 14px; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding: 12px 16px; background-color: #f1f5f9;">
+            📋 Appointment Details
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 16px; font-size: 13px; color: #64748b; font-weight: 600; width: 140px; border-bottom: 1px solid #e2e8f0;">Doctor Name:</td>
+          <td style="padding: 10px 16px; font-size: 13px; color: #0f172a; font-weight: 700; border-bottom: 1px solid #e2e8f0;">${params.doctorName}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 16px; font-size: 13px; color: #64748b; font-weight: 600; border-bottom: 1px solid #e2e8f0;">Specialization:</td>
+          <td style="padding: 10px 16px; font-size: 13px; color: #0f172a; font-weight: 700; border-bottom: 1px solid #e2e8f0;">${params.specialization}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 16px; font-size: 13px; color: #64748b; font-weight: 600; border-bottom: 1px solid #e2e8f0;">Patient Name:</td>
+          <td style="padding: 10px 16px; font-size: 13px; color: #0f172a; font-weight: 700; border-bottom: 1px solid #e2e8f0;">${params.patientName}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 16px; font-size: 13px; color: #64748b; font-weight: 600; border-bottom: 1px solid #e2e8f0;">Appointment Date:</td>
+          <td style="padding: 10px 16px; font-size: 13px; color: #0f172a; font-weight: 700; border-bottom: 1px solid #e2e8f0;">${dateStr}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 16px; font-size: 13px; color: #64748b; font-weight: 600;">Time Window:</td>
+          <td style="padding: 10px 16px; font-size: 13px; color: #0f172a; font-weight: 700;">${timeStr}</td>
+        </tr>
+      </table>
 
       <p style="font-size: 13px; color: #64748b;">
         Please ensure you are ready 5 minutes before your scheduled start time.
@@ -242,14 +252,28 @@ export function renderCancellationEmail(params: {
     badgeText: "CANCELLED",
     badgeColor: "#ef4444",
     childrenHtml: `
-      <p style="font-size: 15px; margin-top: 0;">${recipientGreeting}</p>
+      <p style="font-size: 15px; margin-top: 0; font-weight: 600;">${recipientGreeting}</p>
       <p>The consultation scheduled for <strong>${dateStr} at ${timeStr}</strong> has been cancelled.</p>
 
-      ${
-        params.reason
-          ? `<div class="card"><span class="info-label block" style="margin-bottom: 4px;">Cancellation Note:</span><span style="font-weight: 600; color: #0f172a;">${params.reason}</span></div>`
-          : ""
-      }
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; margin: 20px 0; border-collapse: separate; overflow: hidden;">
+        <tr>
+          <td style="padding: 10px 16px; font-size: 13px; color: #991b1b; font-weight: 600; width: 140px; border-bottom: 1px solid #fee2e2;">Doctor Name:</td>
+          <td style="padding: 10px 16px; font-size: 13px; color: #7f1d1d; font-weight: 700; border-bottom: 1px solid #fee2e2;">${params.doctorName}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 16px; font-size: 13px; color: #991b1b; font-weight: 600; border-bottom: 1px solid #fee2e2;">Patient Name:</td>
+          <td style="padding: 10px 16px; font-size: 13px; color: #7f1d1d; font-weight: 700; border-bottom: 1px solid #fee2e2;">${params.patientName}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 16px; font-size: 13px; color: #991b1b; font-weight: 600;">Cancelled Date:</td>
+          <td style="padding: 10px 16px; font-size: 13px; color: #7f1d1d; font-weight: 700;">${dateStr} at ${timeStr}</td>
+        </tr>
+        ${
+          params.reason
+            ? `<tr><td style="padding: 10px 16px; font-size: 13px; color: #991b1b; font-weight: 600; border-top: 1px solid #fee2e2;">Cancellation Note:</td><td style="padding: 10px 16px; font-size: 13px; color: #7f1d1d; font-weight: 600; border-top: 1px solid #fee2e2;">${params.reason}</td></tr>`
+            : ""
+        }
+      </table>
 
       <p style="font-size: 13px; color: #64748b;">
         If you need to book a new consultation, you can easily find available specialists on our online portal.
@@ -284,7 +308,7 @@ export function renderLeaveNoticeEmail(params: {
     badgeText: "RESCHEDULE REQUIRED",
     badgeColor: "#f59e0b",
     childrenHtml: `
-      <p style="font-size: 15px; margin-top: 0;">Hello ${params.patientName},</p>
+      <p style="font-size: 15px; margin-top: 0; font-weight: 600;">Hello ${params.patientName},</p>
       <p>
         ${params.doctorName} has registered clinical leave for <strong>${originalDateStr}</strong> and will be unavailable on that date.
       </p>
@@ -327,16 +351,16 @@ export function renderMedicationReminderEmail(params: {
     badgeText: "PRESCRIPTION REMINDER",
     badgeColor: "#0284c7",
     childrenHtml: `
-      <p style="font-size: 15px; margin-top: 0;">Hello ${params.patientName},</p>
+      <p style="font-size: 15px; margin-top: 0; font-weight: 600;">Hello ${params.patientName},</p>
       <p>This is your scheduled clinical reminder to take your prescribed medication.</p>
 
-      <div class="card" style="background-color: #f0fdf4; border-color: #bbf7d0;">
-        <div style="font-size: 18px; font-weight: 700; color: #166534; margin-bottom: 4px;">
+      <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 18px; margin: 20px 0;">
+        <div style="font-size: 18px; font-weight: 700; color: #166534; margin-bottom: 6px;">
           💊 ${params.medicineName}
         </div>
         ${
           params.dosage
-            ? `<div style="font-size: 14px; font-weight: 600; color: #15803d; margin-bottom: 8px;">Dosage: ${params.dosage}</div>`
+            ? `<div style="font-size: 14px; font-weight: 600; color: #15803d; margin-bottom: 8px;"><strong>Dosage:</strong> ${params.dosage}</div>`
             : ""
         }
         ${
