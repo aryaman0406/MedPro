@@ -97,30 +97,54 @@ export default function FindDoctorPage() {
 
       {/* Search & Filter Bar */}
       <Card>
-        <CardContent className="p-4 flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by doctor name, medical focus, or symptoms..."
-              className="pl-9 text-xs"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+        <CardContent className="p-4 space-y-3">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by doctor name, medical focus, or symptoms..."
+                className="pl-9 text-xs"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
+              <select
+                className="flex h-9 rounded-md border border-input bg-background px-3 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                value={selectedSpecialization}
+                onChange={(e) => setSelectedSpecialization(e.target.value)}
+              >
+                {specializations.map((spec) => (
+                  <option key={spec} value={spec}>
+                    {spec === "ALL" ? "All Specializations" : spec}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
-            <select
-              className="flex h-9 rounded-md border border-input bg-background px-3 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              value={selectedSpecialization}
-              onChange={(e) => setSelectedSpecialization(e.target.value)}
-            >
-              {specializations.map((spec) => (
-                <option key={spec} value={spec}>
-                  {spec === "ALL" ? "All Specializations" : spec}
-                </option>
-              ))}
-            </select>
+          {/* Quick Filter Chips */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+            <span className="text-[11px] font-medium text-muted-foreground mr-1 shrink-0">Quick Filter:</span>
+            {["ALL", "Cardiology", "Neurology", "Pediatrics", "Dermatology", "General Medicine"].map((spec) => {
+              const isActive = selectedSpecialization === spec;
+              return (
+                <button
+                  key={spec}
+                  type="button"
+                  onClick={() => setSelectedSpecialization(spec)}
+                  className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all shrink-0 border ${
+                    isActive
+                      ? "bg-primary text-primary-foreground border-primary shadow-xs"
+                      : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground border-border/60"
+                  }`}
+                >
+                  {spec === "ALL" ? "✨ All Doctors" : spec}
+                </button>
+              );
+            })}
           </div>
         </CardContent>
       </Card>
