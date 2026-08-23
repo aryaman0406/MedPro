@@ -25,6 +25,11 @@ export const metadata: Metadata = {
   title: "MedTrack Pro - Clinical Consultation & Scheduling Engine",
   description:
     "AI-assisted clinical intake, real-time waiting room queues, automated medication reminders, and multi-party Google Calendar synchronization.",
+  icons: {
+    icon: "/icon.png",
+    shortcut: "/favicon.ico",
+    apple: "/icon.png",
+  },
 };
 
 export default async function RootLayout({
