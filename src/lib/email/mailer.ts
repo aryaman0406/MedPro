@@ -18,13 +18,16 @@ const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
  * Configure Nodemailer Transport for Brevo SMTP
  */
 function createTransporter() {
-  // 1. Gmail SMTP option (if GMAIL_USER & GMAIL_APP_PASSWORD are provided)
-  if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
+  // 1. Gmail SMTP option (if GMAIL_USER or a @gmail.com SMTP_USER is provided)
+  const gmailUser = process.env.GMAIL_USER || (process.env.SMTP_USER?.includes("@gmail.com") ? process.env.SMTP_USER : null) || (process.env.BREVO_SMTP_USER?.includes("@gmail.com") ? process.env.BREVO_SMTP_USER : null);
+  const gmailPass = process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASS || (process.env.BREVO_SMTP_USER?.includes("@gmail.com") ? process.env.BREVO_SMTP_KEY : null);
+
+  if (gmailUser && gmailUser.includes("@gmail.com") && gmailPass) {
     return nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_APP_PASSWORD,
+        user: gmailUser,
+        pass: gmailPass,
       },
     });
   }
@@ -75,10 +78,14 @@ export async function sendEmail({
   }
 
   const transporter = createTransporter();
-  const defaultFrom = process.env.GMAIL_USER
-    ? `"MedTrack Pro" <${process.env.GMAIL_USER}>`
+  const gmailUser = process.env.GMAIL_USER || (process.env.SMTP_USER?.includes("@gmail.com") ? process.env.SMTP_USER : null);
+  const defaultFrom = gmailUser
+    ? `"MedTrack Pro" <${gmailUser}>`
     : '"MedTrack Pro" <no-reply@medtrack.pro>';
-  const from = process.env.EMAIL_FROM || defaultFrom;
+  
+  const from = (gmailUser && process.env.EMAIL_FROM?.includes("onboarding@resend.dev"))
+    ? `"MedTrack Pro" <${gmailUser}>`
+    : (process.env.EMAIL_FROM || defaultFrom);
 
   try {
     const info = await transporter.sendMail({
