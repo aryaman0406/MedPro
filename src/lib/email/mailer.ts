@@ -11,8 +11,13 @@ import {
 } from "@/lib/email/templates";
 import { generateRescheduleToken } from "@/lib/tokens";
 
-// App Base URL for links
-const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+// App Base URL for links — strictly use HTTPS production URL to prevent spam filters flagging localhost links
+const baseUrl =
+  process.env.NEXTAUTH_URL && !process.env.NEXTAUTH_URL.includes("localhost")
+    ? process.env.NEXTAUTH_URL
+    : process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : "https://med-pro-one.vercel.app";
 
 /**
  * Configure Nodemailer Transport.
@@ -84,10 +89,9 @@ export async function verifySmtpConnection(): Promise<{ ok: boolean; error?: str
 }
 
 /**
- * Low-level email dispatcher.
+ * Low-level email dispatcher with anti-spam deliverability headers.
  * - If no SMTP credentials are configured at all, logs to console (simulation).
- * - If credentials are configured, sends via SMTP and THROWS on failure
- *   (no silent swallowing — callers must handle errors).
+ * - If credentials are configured, sends via SMTP and THROWS on failure.
  */
 export async function sendEmail({
   to,
@@ -120,9 +124,23 @@ export async function sendEmail({
     ? `"MedTrack Pro" <${gmailUser}>`
     : '"MedTrack Pro" <no-reply@medtrack.pro>');
 
-  // Send via SMTP — errors propagate to caller (no silent swallowing)
+  // Send via SMTP with deliverability headers — errors propagate to caller
   try {
-    const info = await transporter.sendMail({ from, to, subject, html, text });
+    const info = await transporter.sendMail({
+      from,
+      to,
+      replyTo: gmailUser || from,
+      subject,
+      html,
+      text,
+      headers: {
+        "X-Entity-Ref-ID": `medtrack-${Date.now()}`,
+        "Auto-Submitted": "auto-generated",
+        "X-Auto-Response-Suppress": "All",
+        "Precedence": "bulk",
+        "X-Priority": "3",
+      },
+    });
     console.log(`[SMTP] Sent to ${to} — messageId: ${info.messageId}`);
     return { messageId: info.messageId };
   } catch (error: unknown) {
@@ -134,7 +152,6 @@ export async function sendEmail({
       e.response ? `response=${e.response}` : null,
     ].filter(Boolean).join(" | ");
     console.error(`[SMTP] FAILED to send to ${to}: ${errorDetail}`);
-    // Re-throw with full detail so processEmailQueue records it in lastError
     throw new Error(errorDetail);
   }
 }
