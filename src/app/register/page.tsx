@@ -77,8 +77,20 @@ export default function RegisterPage() {
         }
         toast.error(res.error || "Please check your inputs.");
       } else {
-        toast.success(res.message || "Registration successful! Please sign in.");
-        router.push("/login");
+        toast.success("Account created successfully! Signing you in...");
+        const signInRes = await signIn("credentials", {
+          email,
+          password,
+          redirect: false,
+        });
+
+        if (signInRes?.error) {
+          toast.success("Registration successful! Please sign in.");
+          router.push("/login");
+        } else {
+          router.push(role === "DOCTOR" ? "/doctor/schedule" : "/patient/find-doctor");
+          router.refresh();
+        }
       }
     } catch (err) {
       setErrorMessage("An unexpected error occurred during registration.");
