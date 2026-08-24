@@ -35,6 +35,7 @@ export type SlotStatus =
   | "BOOKED"
   | "HELD_BY_YOU"
   | "HELD_BY_OTHER"
+  | "PATIENT_CONFLICT"
   | "PAST"
   | "ON_LEAVE";
 
@@ -44,4 +45,5 @@ export interface ComputedSlot {
   displayTime: string;
   status: SlotStatus;
   holdExpiresInSeconds?: number;
+  conflictDoctorName?: string;
 }

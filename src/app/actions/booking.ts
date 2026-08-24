@@ -236,7 +236,7 @@ export async function getDoctorSlotsAction(
     const dayStartDateTime = new Date(year, month - 1, day, startHour, startMin, 0, 0);
     const dayEndDateTime = new Date(year, month - 1, day, endHour, endMin, 0, 0);
 
-    // 5. Fetch existing appointments for the day
+    // 5. Fetch existing appointments for the doctor for the day
     const existingAppointments = await withDbRetry(() =>
       prisma.appointment.findMany({
         where: {
@@ -257,6 +257,35 @@ export async function getDoctorSlotsAction(
       })
     );
 
+    // 5b. Fetch authenticated patient's existing active appointments across all doctors for this day
+    const patientAppointmentsForDay = currentUserId
+      ? await withDbRetry(() =>
+          prisma.appointment.findMany({
+            where: {
+              patientId: currentUserId,
+              status: {
+                notIn: [AppointmentStatus.CANCELLED],
+              },
+              startTime: {
+                gte: new Date(year, month - 1, day, 0, 0, 0, 0),
+                lte: new Date(year, month - 1, day, 23, 59, 59, 999),
+              },
+            },
+            include: {
+              doctor: {
+                include: {
+                  user: {
+                    select: {
+                      name: true,
+                    },
+                  },
+                },
+              },
+            },
+          })
+        )
+      : [];
+
     // 6. Fetch active Redis holds for doctor
     const activeHolds = await getAllDoctorHolds(doctorId);
 
@@ -269,6 +298,8 @@ export async function getDoctorSlotsAction(
       const currentSlotEnd = new Date(currentSlotStart.getTime() + slotDuration * 60 * 1000);
       const isoStart = currentSlotStart.toISOString();
       const isoEnd = currentSlotEnd.toISOString();
+      const slotStartMs = currentSlotStart.getTime();
+      const slotEndMs = currentSlotEnd.getTime();
 
       // Format human-readable time (e.g. 09:00 AM)
       const hours12 = currentSlotStart.getHours() % 12 || 12;
@@ -285,12 +316,17 @@ export async function getDoctorSlotsAction(
           status: "PAST",
         });
       } else {
-        // Check if overlaps confirmed appointment
+        // Check if overlaps doctor's confirmed appointment
         const isBooked = existingAppointments.some((appt) => {
           const apptStart = new Date(appt.startTime).getTime();
           const apptEnd = new Date(appt.endTime).getTime();
-          const slotStartMs = currentSlotStart.getTime();
-          const slotEndMs = currentSlotEnd.getTime();
+          return slotStartMs < apptEnd && slotEndMs > apptStart;
+        });
+
+        // Check if overlaps patient's existing appointment with another doctor
+        const patientConflict = patientAppointmentsForDay.find((appt) => {
+          const apptStart = new Date(appt.startTime).getTime();
+          const apptEnd = new Date(appt.endTime).getTime();
           return slotStartMs < apptEnd && slotEndMs > apptStart;
         });
 
@@ -300,6 +336,14 @@ export async function getDoctorSlotsAction(
             isoEndTime: isoEnd,
             displayTime,
             status: "BOOKED",
+          });
+        } else if (patientConflict) {
+          slots.push({
+            isoStartTime: isoStart,
+            isoEndTime: isoEnd,
+            displayTime,
+            status: "PATIENT_CONFLICT",
+            conflictDoctorName: patientConflict.doctor.user.name,
           });
         } else {
           // Check Redis hold
@@ -385,7 +429,7 @@ export async function holdSlotAction(
     const slotDuration = doctor.slotDurationMinutes || 30;
     const endTime = new Date(startTime.getTime() + slotDuration * 60 * 1000);
 
-    // Check DB for existing confirmed appointment
+    // Check DB for existing confirmed appointment for the doctor
     const existing = await prisma.appointment.findFirst({
       where: {
         doctorId,
@@ -399,6 +443,32 @@ export async function holdSlotAction(
       return {
         success: false,
         error: "This slot is already booked. Please choose another available time.",
+      };
+    }
+
+    // Check DB if the patient already has an active appointment overlapping this time window across ANY doctor
+    const patientOverlap = await prisma.appointment.findFirst({
+      where: {
+        patientId: user.id,
+        status: { notIn: [AppointmentStatus.CANCELLED] },
+        startTime: { lt: endTime },
+        endTime: { gt: startTime },
+      },
+      include: {
+        doctor: {
+          include: {
+            user: {
+              select: { name: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (patientOverlap) {
+      return {
+        success: false,
+        error: `You already have an active consultation booked at this time with Dr. ${patientOverlap.doctor.user.name}. Please select a different time.`,
       };
     }
 
@@ -516,7 +586,7 @@ export async function confirmBookingAction(
     // 3. Attempt Insert inside Prisma Transaction protected by PostgreSQL GiST constraint
     try {
       const appointment = await prisma.$transaction(async (tx) => {
-        // Pre-check for overlapping active appointments
+        // Pre-check for overlapping active appointments for this doctor
         const overlap = await tx.appointment.findFirst({
           where: {
             doctorId,
@@ -528,6 +598,29 @@ export async function confirmBookingAction(
 
         if (overlap) {
           throw new Error("CONFLICT_SLOT_TAKEN");
+        }
+
+        // Pre-check for patient double-booking across ANY doctor
+        const patientOverlap = await tx.appointment.findFirst({
+          where: {
+            patientId: user.id,
+            status: { notIn: [AppointmentStatus.CANCELLED] },
+            startTime: { lt: endTime },
+            endTime: { gt: startTime },
+          },
+          include: {
+            doctor: {
+              include: {
+                user: {
+                  select: { name: true },
+                },
+              },
+            },
+          },
+        });
+
+        if (patientOverlap) {
+          throw new Error(`CONFLICT_PATIENT_DOUBLE_BOOKING:${patientOverlap.doctor.user.name}`);
         }
 
         const newAppt = await tx.appointment.create({
@@ -603,6 +696,15 @@ export async function confirmBookingAction(
       const prismaCode = (insertError as { code?: string })?.code;
       const fullErrorStr = `${errorMsg} ${String(insertError)}`;
 
+      if (errorMsg.startsWith("CONFLICT_PATIENT_DOUBLE_BOOKING:")) {
+        const conflictDoc = errorMsg.replace("CONFLICT_PATIENT_DOUBLE_BOOKING:", "");
+        await deleteSlotHold(doctorId, isoStartTime);
+        return {
+          success: false,
+          error: `You already have an active consultation booked at this time with Dr. ${conflictDoc}. Please choose another available time slot.`,
+        };
+      }
+
       // Detect PostgreSQL GiST exclusion constraint violation (code 23P01 / P2002 / P2010)
       const isExclusionConflict =
         fullErrorStr.includes("CONFLICT_SLOT_TAKEN") ||
@@ -667,13 +769,25 @@ export async function getPatientAppointmentsAction() {
       },
     });
 
+    // Upcoming: consultations that are not yet ended and not completed/cancelled
     const upcoming = appointments.filter(
-      (a) => new Date(a.startTime) >= now && a.status !== AppointmentStatus.CANCELLED
+      (a) =>
+        new Date(a.endTime) >= now &&
+        a.status !== AppointmentStatus.CANCELLED &&
+        a.status !== AppointmentStatus.COMPLETED &&
+        a.status !== AppointmentStatus.NO_SHOW
     );
 
-    const past = appointments.filter(
-      (a) => new Date(a.startTime) < now || a.status === AppointmentStatus.CANCELLED
-    );
+    // Past / Completed: consultations that have ended, or are marked COMPLETED / CANCELLED
+    const past = appointments
+      .filter(
+        (a) =>
+          new Date(a.endTime) < now ||
+          a.status === AppointmentStatus.CANCELLED ||
+          a.status === AppointmentStatus.COMPLETED ||
+          a.status === AppointmentStatus.NO_SHOW
+      )
+      .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
 
     return {
       success: true,

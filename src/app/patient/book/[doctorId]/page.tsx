@@ -421,12 +421,14 @@ export default function DoctorBookingPage() {
                   const isHeldByMe = slot.status === "HELD_BY_YOU";
                   const isHeldByOther = slot.status === "HELD_BY_OTHER";
                   const isBooked = slot.status === "BOOKED";
+                  const isConflict = slot.status === "PATIENT_CONFLICT";
                   const isPast = slot.status === "PAST";
                   const isAvailable = slot.status === "AVAILABLE";
 
                   let buttonVariant: "default" | "outline" | "secondary" = "outline";
                   let extraClasses = "border-primary/30 hover:border-primary hover:bg-primary/5 text-foreground";
                   let label = slot.displayTime;
+                  let title: string | undefined = undefined;
 
                   if (isHeldByMe) {
                     buttonVariant = "default";
@@ -437,6 +439,12 @@ export default function DoctorBookingPage() {
                   } else if (isBooked) {
                     extraClasses = "opacity-40 bg-muted border-dashed cursor-not-allowed line-through text-[11px]";
                     label = `${slot.displayTime} (Booked)`;
+                  } else if (isConflict) {
+                    extraClasses = "opacity-60 bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-400 cursor-not-allowed text-[11px]";
+                    label = `${slot.displayTime} (You're Booked)`;
+                    title = slot.conflictDoctorName
+                      ? `You already have an appointment at this time with Dr. ${slot.conflictDoctorName}`
+                      : "You already have another appointment booked at this time";
                   } else if (isPast) {
                     extraClasses = "opacity-30 bg-muted cursor-not-allowed text-[11px]";
                     label = `${slot.displayTime} (Past)`;
@@ -447,7 +455,8 @@ export default function DoctorBookingPage() {
                       key={slot.isoStartTime}
                       variant={buttonVariant}
                       className={`h-11 flex flex-col justify-center text-xs font-mono transition-all ${extraClasses}`}
-                      disabled={!isAvailable && !isHeldByMe || isHoldingSlot}
+                      disabled={(!isAvailable && !isHeldByMe) || isHoldingSlot}
+                      title={title}
                       onClick={() => handleSelectSlot(slot)}
                     >
                       <span>{label}</span>
