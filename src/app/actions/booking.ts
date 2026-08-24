@@ -581,15 +581,12 @@ export async function confirmBookingAction(
       // 4. Success: Clear Redis hold
       await deleteSlotHold(doctorId, isoStartTime);
 
-      // 5. Trigger Pre-Visit AI Intake summary generation asynchronously in background
-      void processAppointmentPreVisitSummary(appointment.id, symptomText.trim()).catch((aiErr) => {
-        console.error("Background AI summary generation notice:", aiErr);
-      });
-
-      // 6. Automatically dispatch queued confirmation emails immediately with zero manual admin action
-      void processEmailQueue(10).catch((emailErr) => {
-        console.error("Background email queue processing notice:", emailErr);
-      });
+      // 5. Generate Pre-Visit AI Intake summary and dispatch confirmation emails
+      // Awaiting both guarantees execution completes before server action responds
+      await Promise.allSettled([
+        processAppointmentPreVisitSummary(appointment.id, symptomText.trim()),
+        processEmailQueue(10),
+      ]);
 
       revalidatePath("/patient/appointments");
       revalidatePath("/admin");

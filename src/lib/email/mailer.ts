@@ -11,13 +11,8 @@ import {
 } from "@/lib/email/templates";
 import { generateRescheduleToken } from "@/lib/tokens";
 
-// App Base URL for links — strictly use HTTPS production URL to prevent spam filters flagging localhost links
-const baseUrl =
-  process.env.NEXTAUTH_URL && !process.env.NEXTAUTH_URL.includes("localhost")
-    ? process.env.NEXTAUTH_URL
-    : process.env.VERCEL_PROJECT_PRODUCTION_URL
-    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-    : "https://med-pro-one.vercel.app";
+// App Base URL for links
+const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
 
 /**
  * Configure Nodemailer Transport.
@@ -293,7 +288,7 @@ export async function processEmailQueue(
             symptomText: appt.symptomText,
             portalUrl: isDoctorRecipient
               ? `${baseUrl}/doctor/appointments/${appt.id}`
-              : `${baseUrl}/patient/appointments`,
+              : `${baseUrl}/patient/book/confirmation/${appt.id}`,
           });
           subject = rendered.subject;
           html = rendered.html;
