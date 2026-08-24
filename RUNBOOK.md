@@ -150,38 +150,43 @@ MedTrack Pro uses Upstash QStash to execute periodic background checks (every 15
 
 ---
 
-## 6. Brevo SMTP Relay (Email Delivery Engine)
+## 6. Gmail SMTP (Email Delivery Engine)
 
 ### Overview
-MedTrack Pro delivers all transactional notifications (booking confirmations, cancellations, 24h reminders, leave conflict notices with magic links, and medication reminders) through Brevo's SMTP relay with Nodemailer. Brevo provides a free tier offering 300 emails/day with no credit card required.
+MedTrack Pro delivers all transactional notifications (booking confirmations, cancellations, 24h reminders, leave conflict notices with magic links, and medication reminders) through Gmail SMTP with Nodemailer. Emails are sent from your Gmail account using a Google App Password.
 
 ### Setup Instructions
-1. **Create Free Brevo Account**:
-   - Go to [Brevo](https://www.brevo.com/) and sign up for a free account.
-2. **Retrieve SMTP Credentials**:
-   - Navigate to your account profile menu → **SMTP & API** (or visit [https://app.brevo.com/settings/keys/smtp](https://app.brevo.com/settings/keys/smtp)).
-   - Under the **SMTP** tab:
-     - **SMTP Server**: `smtp-relay.brevo.com`
-     - **Port**: `587`
-     - **Login**: Your Brevo login email address
-     - Click **"Generate a new SMTP key"** to obtain your password/key.
+1. **Enable 2-Step Verification** on the Gmail account:
+   - Go to [Google Account Security](https://myaccount.google.com/security) → Enable **2-Step Verification**.
+2. **Generate a Google App Password** (NOT the regular account password):
+   - Go to [Google App Passwords](https://myaccount.google.com/apppasswords).
+   - Select **Mail** and generate a 16-character App Password.
 3. **Configure `.env.local`**:
    ```env
-   BREVO_SMTP_HOST="smtp-relay.brevo.com"
-   BREVO_SMTP_PORT="587"
-   BREVO_SMTP_USER="your-brevo-login-email@example.com"
-   BREVO_SMTP_KEY="your-generated-smtp-key"
-   EMAIL_FROM="MedTrack Pro <no-reply@medtrack.pro>"
+   GMAIL_USER="your-gmail@gmail.com"
+   GMAIL_APP_PASSWORD="xxxx xxxx xxxx xxxx"
+   EMAIL_FROM="MedTrack Pro <your-gmail@gmail.com>"
    ```
-4. **Create 5-Minute Recurring Schedule in QStash Console**:
+4. **Add to Vercel Environment Variables** (for production):
+   - Go to Vercel Project Settings → Environment Variables.
+   - Add `GMAIL_USER`, `GMAIL_APP_PASSWORD`, and `EMAIL_FROM` with the same values.
+5. **Verify SMTP Connection**:
+   - Hit `GET /api/health/smtp` to confirm credentials are accepted.
+   - Response: `{ "ok": true }` on success, `{ "ok": false, "error": "..." }` on failure.
+6. **Create 5-Minute Recurring Schedule in QStash Console** (for retry processing):
    - Navigate to **Schedules** → **Create Schedule**.
    - **Destination URL**: `https://your-domain.com/api/jobs/process-email-queue`
    - **Cron Expression**: `*/5 * * * *` (Runs every 5 minutes).
    - **Method**: `POST`.
-5. **Resilient Failure Handling**:
+7. **Resilient Failure Handling**:
    - The queue worker automatically retries failed emails up to 5 times.
    - If an email reaches 5 attempts without success, it is flagged as `DEAD`.
-   - Administrators can view failed/dead emails on `/admin` and click **"Retry"** to re-queue them once SMTP credentials are fixed.
+   - Administrators can view failed/dead emails on `/admin` and click **"Retry"** to re-queue them.
+
+### Known Limitations
+- **Gmail free SMTP sending limit**: ~500 emails/day. Sufficient for demo/grading use.
+- **From address**: Must match the authenticated Gmail account exactly. Gmail SMTP rejects or flags mismatched From headers.
+- **Seeded doctor/patient emails** (`@medtrack.pro`, `@example.com`): Automatically detected as placeholder domains and skipped (simulated as SENT without SMTP dispatch) to prevent bouncebacks.
 
 ---
 

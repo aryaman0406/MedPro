@@ -15,14 +15,15 @@ import { generateRescheduleToken } from "@/lib/tokens";
 const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
 
 /**
- * Configure Nodemailer Transport for Brevo SMTP
+ * Configure Nodemailer Transport.
+ * Priority: Gmail SMTP (GMAIL_USER + GMAIL_APP_PASSWORD) > Generic SMTP.
  */
 function createTransporter() {
-  // 1. Gmail SMTP option (if GMAIL_USER or a @gmail.com SMTP_USER is provided)
-  const gmailUser = process.env.GMAIL_USER || (process.env.SMTP_USER?.includes("@gmail.com") ? process.env.SMTP_USER : null) || (process.env.BREVO_SMTP_USER?.includes("@gmail.com") ? process.env.BREVO_SMTP_USER : null);
-  const gmailPass = process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASS || (process.env.BREVO_SMTP_USER?.includes("@gmail.com") ? process.env.BREVO_SMTP_KEY : null);
+  // 1. Gmail SMTP (preferred — requires App Password, not account password)
+  const gmailUser = process.env.GMAIL_USER;
+  const gmailPass = process.env.GMAIL_APP_PASSWORD;
 
-  if (gmailUser && gmailUser.includes("@gmail.com") && gmailPass) {
+  if (gmailUser && gmailPass) {
     return nodemailer.createTransport({
       service: "gmail",
       auth: {
@@ -32,14 +33,14 @@ function createTransporter() {
     });
   }
 
-  // 2. Generic / Brevo / Resend SMTP option
+  // 2. Generic SMTP fallback (Brevo, Resend, etc.)
   const host = process.env.BREVO_SMTP_HOST || process.env.SMTP_HOST || "smtp-relay.brevo.com";
   const port = Number(process.env.BREVO_SMTP_PORT || process.env.SMTP_PORT) || 587;
   const user = process.env.BREVO_SMTP_USER || process.env.SMTP_USER;
   const pass = process.env.BREVO_SMTP_KEY || process.env.SMTP_PASS;
 
   if (!user || !pass) {
-    console.warn("⚠️ SMTP credentials (BREVO_SMTP_USER / BREVO_SMTP_KEY / GMAIL_USER) not configured.");
+    console.warn("⚠️ SMTP credentials not configured. Emails will be simulated in console.");
   }
 
   return nodemailer.createTransport({
@@ -52,7 +53,41 @@ function createTransporter() {
 }
 
 /**
- * Low-level email dispatcher with graceful dev/console fallback
+ * Verify SMTP connection is alive and credentials are accepted.
+ * Call from a health-check route to confirm Gmail auth works.
+ */
+export async function verifySmtpConnection(): Promise<{ ok: boolean; error?: string }> {
+  const gmailUser = process.env.GMAIL_USER;
+  const gmailPass = process.env.GMAIL_APP_PASSWORD;
+  const genericUser = process.env.BREVO_SMTP_USER || process.env.SMTP_USER;
+  const genericPass = process.env.BREVO_SMTP_KEY || process.env.SMTP_PASS;
+
+  if (!gmailUser && !genericUser) {
+    return { ok: false, error: "No SMTP credentials configured (GMAIL_USER or BREVO_SMTP_USER/SMTP_USER)" };
+  }
+
+  try {
+    const transporter = createTransporter();
+    await transporter.verify();
+    return { ok: true };
+  } catch (err: unknown) {
+    const e = err as Error & { code?: string; response?: string; responseCode?: number };
+    const errorDetail = [
+      e.message,
+      e.code ? `code=${e.code}` : null,
+      e.responseCode ? `responseCode=${e.responseCode}` : null,
+      e.response ? `response=${e.response}` : null,
+    ].filter(Boolean).join(" | ");
+    console.error("[SMTP Verify] Failed:", errorDetail);
+    return { ok: false, error: errorDetail };
+  }
+}
+
+/**
+ * Low-level email dispatcher.
+ * - If no SMTP credentials are configured at all, logs to console (simulation).
+ * - If credentials are configured, sends via SMTP and THROWS on failure
+ *   (no silent swallowing — callers must handle errors).
  */
 export async function sendEmail({
   to,
@@ -65,73 +100,42 @@ export async function sendEmail({
   html: string;
   text?: string;
 }): Promise<{ messageId?: string }> {
-  const user = process.env.BREVO_SMTP_USER || process.env.GMAIL_USER || process.env.SMTP_USER;
-  const pass = process.env.BREVO_SMTP_KEY || process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASS;
+  const hasGmail = process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD;
+  const hasGeneric = (process.env.BREVO_SMTP_USER || process.env.SMTP_USER) &&
+                     (process.env.BREVO_SMTP_KEY || process.env.SMTP_PASS);
 
-  if (!user || !pass) {
-    console.log(`\n📨 [Simulated Email Dispatch] ───`);
+  // Only simulate if NO credentials are configured at all
+  if (!hasGmail && !hasGeneric) {
+    console.log(`\n📨 [Simulated Email — No SMTP Configured] ───`);
     console.log(`To: ${to}`);
     console.log(`Subject: ${subject}`);
-    console.log(`Content Preview: ${text || subject}`);
+    console.log(`Content Preview: ${(text || subject).substring(0, 200)}`);
     console.log(`──────────────────────────────────\n`);
-    return { messageId: `mock-${Date.now()}` };
+    return { messageId: `mock-no-creds-${Date.now()}` };
   }
 
   const transporter = createTransporter();
-  const gmailUser = process.env.GMAIL_USER || (process.env.SMTP_USER?.includes("@gmail.com") ? process.env.SMTP_USER : null);
-  const defaultFrom = gmailUser
+  const gmailUser = process.env.GMAIL_USER;
+  const from = process.env.EMAIL_FROM || (gmailUser
     ? `"MedTrack Pro" <${gmailUser}>`
-    : '"MedTrack Pro" <no-reply@medtrack.pro>';
-  
-  const from = (gmailUser && process.env.EMAIL_FROM?.includes("onboarding@resend.dev"))
-    ? `"MedTrack Pro" <${gmailUser}>`
-    : (process.env.EMAIL_FROM || defaultFrom);
+    : '"MedTrack Pro" <no-reply@medtrack.pro>');
 
+  // Send via SMTP — errors propagate to caller (no silent swallowing)
   try {
-    const info = await transporter.sendMail({
-      from,
-      to,
-      subject,
-      html,
-      text,
-    });
+    const info = await transporter.sendMail({ from, to, subject, html, text });
+    console.log(`[SMTP] Sent to ${to} — messageId: ${info.messageId}`);
     return { messageId: info.messageId };
   } catch (error: unknown) {
-    const errorMsg = (error as Error)?.message || "";
-
-    // Check for Resend free tier test recipient restriction (550 error)
-    const match = errorMsg.match(/own email address \(([^)]+)\)/i);
-    const allowedTestingEmail = match ? match[1] : null;
-
-    if (allowedTestingEmail && allowedTestingEmail.toLowerCase() !== to.toLowerCase()) {
-      console.warn(
-        `⚠️ [Email Relay] Resend test restriction detected. Rerouting message intended for [${to}] to owner account [${allowedTestingEmail}].`
-      );
-      const reroutedSubject = `[For: ${to}] ${subject}`;
-      const reroutedHtml = `<div style="padding: 10px; margin-bottom: 15px; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px; font-family: sans-serif; font-size: 13px; color: #92400e;"><strong>Note:</strong> This email was originally addressed to <strong>${to}</strong>. It was delivered to your registered Resend testing inbox.</div>${html}`;
-
-      const fallbackInfo = await transporter.sendMail({
-        from,
-        to: allowedTestingEmail,
-        subject: reroutedSubject,
-        html: reroutedHtml,
-        text: `[Originally intended for ${to}]\n\n${text || ""}`,
-      });
-
-      return { messageId: fallbackInfo.messageId };
-    }
-
-    // Fallback simulation in dev if SMTP fails completely
-    if (process.env.NODE_ENV !== "production") {
-      console.log(`\n📨 [Simulated Email Dispatch (Fallback)] ───`);
-      console.log(`To: ${to}`);
-      console.log(`Subject: ${subject}`);
-      console.log(`Original Error: ${errorMsg}`);
-      console.log(`──────────────────────────────────────────\n`);
-      return { messageId: `mock-fallback-${Date.now()}` };
-    }
-
-    throw error;
+    const e = error as Error & { code?: string; response?: string; responseCode?: number };
+    const errorDetail = [
+      e.message,
+      e.code ? `code=${e.code}` : null,
+      e.responseCode ? `responseCode=${e.responseCode}` : null,
+      e.response ? `response=${e.response}` : null,
+    ].filter(Boolean).join(" | ");
+    console.error(`[SMTP] FAILED to send to ${to}: ${errorDetail}`);
+    // Re-throw with full detail so processEmailQueue records it in lastError
+    throw new Error(errorDetail);
   }
 }
 
@@ -163,8 +167,9 @@ export function isDummyEmail(email: string): boolean {
 }
 
 /**
- * Unified Email Queue Processor
- * Finds pending and retriable failed emails, renders templates, and sends via Brevo SMTP
+ * Unified Email Queue Processor.
+ * Finds pending and retriable failed emails, renders templates, and sends via SMTP.
+ * Errors are recorded in lastError — never silently swallowed.
  */
 export async function processEmailQueue(
   batchLimit = 50
@@ -233,6 +238,7 @@ export async function processEmailQueue(
         where: { id: emailLog.id },
         data: {
           status: EmailStatus.SENT,
+          attempts,
           lastError: null,
         },
       });
@@ -384,7 +390,7 @@ export async function processEmailQueue(
           throw new Error(`Unsupported email type: ${emailLog.type}`);
       }
 
-      // Dispatch email via Nodemailer
+      // Dispatch email via SMTP — throws on failure (no silent fallback)
       await sendEmail({
         to: emailLog.toEmail,
         subject,
@@ -392,11 +398,12 @@ export async function processEmailQueue(
         text,
       });
 
-      // Mark SENT on success
+      // Mark SENT on success — record attempts count for auditability
       await prisma.emailLog.update({
         where: { id: emailLog.id },
         data: {
           status: EmailStatus.SENT,
+          attempts,
           lastError: null,
         },
       });
@@ -410,7 +417,12 @@ export async function processEmailQueue(
         status: EmailStatus.SENT,
       });
     } catch (err: unknown) {
-      const errorMsg = (err as Error)?.message || "Failed to dispatch email.";
+      const e = err as Error & { code?: string; response?: string; responseCode?: number };
+      const errorMsg = [
+        e.message || "Failed to dispatch email.",
+        e.code ? `code=${e.code}` : null,
+        e.responseCode ? `responseCode=${e.responseCode}` : null,
+      ].filter(Boolean).join(" | ");
       console.error(`[Email Queue] Failed to send email [${emailLog.id}] to ${emailLog.toEmail}:`, errorMsg);
 
       const nextStatus = attempts >= 5 ? EmailStatus.DEAD : EmailStatus.FAILED;
