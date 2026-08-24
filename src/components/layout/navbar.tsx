@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { NotificationDropdown } from "@/components/layout/notification-dropdown";
 import { logoutUserAction } from "@/app/actions/auth";
 import { cn } from "@/lib/utils";
 
@@ -145,21 +146,7 @@ export function Navbar({ user }: NavbarProps) {
         <div className="flex items-center gap-3">
           <ThemeToggle />
 
-          {user && (
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-9 w-9 relative rounded-full"
-              title="Notifications"
-              aria-label="View notifications"
-            >
-              <Bell className="h-4 w-4 text-muted-foreground" />
-              <span className="absolute top-1 right-1 flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-              </span>
-            </Button>
-          )}
+          {user && <NotificationDropdown />}
 
           {user ? (
             <DropdownMenu>

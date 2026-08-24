@@ -138,6 +138,24 @@ export interface EmailProcessResult {
 }
 
 /**
+ * Helper to check if an email address belongs to a mock/placeholder domain.
+ * Avoids sending real SMTP messages to non-existent seed addresses like doctor@medtrack.pro.
+ */
+export function isDummyEmail(email: string): boolean {
+  if (!email) return true;
+  const lower = email.toLowerCase().trim();
+  return (
+    lower.endsWith("@medtrack.pro") ||
+    lower.endsWith("@example.com") ||
+    lower.endsWith("@example.org") ||
+    lower.endsWith("@example.net") ||
+    lower.endsWith("@test.com") ||
+    lower.endsWith("@localhost") ||
+    lower.endsWith(".invalid")
+  );
+}
+
+/**
  * Unified Email Queue Processor
  * Finds pending and retriable failed emails, renders templates, and sends via Brevo SMTP
  */
@@ -200,6 +218,27 @@ export async function processEmailQueue(
 
   for (const emailLog of pendingEmails) {
     const attempts = emailLog.attempts + 1;
+
+    // Skip real SMTP dispatch for dummy placeholder domains (e.g. seeded doctor emails like @medtrack.pro)
+    if (isDummyEmail(emailLog.toEmail)) {
+      console.log(`[Email Queue] Simulated dispatch for placeholder domain recipient: ${emailLog.toEmail}`);
+      await prisma.emailLog.update({
+        where: { id: emailLog.id },
+        data: {
+          status: EmailStatus.SENT,
+          lastError: null,
+        },
+      });
+      sent++;
+      results.push({
+        emailLogId: emailLog.id,
+        toEmail: emailLog.toEmail,
+        type: emailLog.type,
+        success: true,
+        status: EmailStatus.SENT,
+      });
+      continue;
+    }
 
     try {
       const appt = emailLog.appointment;
