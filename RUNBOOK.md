@@ -25,6 +25,18 @@ MedTrack Pro uses Prisma ORM against a PostgreSQL relational database.
    npm run db:seed
    ```
 
+### 1.1 Supabase Security & Row-Level Security (RLS)
+Supabase automatically exposes all tables in the `public` schema over PostgREST HTTP endpoints. To prevent unauthorized public access (`rls_disabled_in_public` security warnings), Row-Level Security must be enabled on all public schema tables:
+```bash
+npx tsx scripts/enable-supabase-rls.ts
+```
+To verify RLS status on live database tables at any time:
+```bash
+npx tsx scripts/check-rls.ts
+```
+> Note: Server-side Prisma operations connect as the PostgreSQL database owner/superuser, which automatically bypasses RLS while protecting public HTTP endpoints.
+
+
 ---
 
 ## 2. Authentication (Auth.js v5 / NextAuth)
